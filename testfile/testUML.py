@@ -249,7 +249,7 @@ class User():
 
     def add_member_to_project(self, prID, username):
         # adding a member to the chosen pr
-        print(self.projects[prID]["Admin"] , "&&&&&&&")    
+           
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             if username not in self.projects[prID]["Members"]:
                 # load the pr with the ID and add member to it
