@@ -1,0 +1,12 @@
+INFO - 2024-05-23 16:52:32,661 - root) 'sima' has successfully created an account.
+INFO - 2024-05-23 16:53:24,502 - root) Project '123' was created by sima.
+INFO - 2024-05-23 16:54:25,391 - root) 'alex' has successfully created an account.
+INFO - 2024-05-23 16:54:54,019 - root) 'sima' has successfully logged in.
+INFO - 2024-05-23 16:55:11,445 - root) 'alex' was added to Project '123' by 'sima'.
+INFO - 2024-05-23 16:55:31,645 - root) '93f81f18-0727-40a0-b566-339522c3e562' task was created by 'sima'.
+INFO - 2024-05-23 16:56:12,113 - root) '93f81f18-0727-40a0-b566-339522c3e562' task was assigned to 'alex' by 'sima' from '123' project.
+INFO - 2024-05-23 17:04:15,992 - root) 'admin' has successfully logged in.
+INFO - 2024-05-23 17:04:32,965 - root) 'sima' was banned by the admin.
+INFO - 2024-05-23 17:04:45,096 - root) 'sima' was unbanned by the admin.
+INFO - 2024-05-23 17:05:39,938 - root) 'sima' has successfully logged in.
+INFO - 2024-05-23 17:06:06,470 - root) The priority of '93f81f18-0727-40a0-b566-339522c3e562' task from the '123' project was changed from 'LOW' to 'HIGH' by 'sima'.

@@ -67,6 +67,7 @@ def createAdmin():
             message = input()
             if message == "yes":
                 deleteFilesWithExtension("json")
+                deleteFilesWithExtension("log")
                 deleteDir("users")
                 deleteDir("tasks")
                 deleteDir("projects")

@@ -3,9 +3,40 @@ import hashlib
 import json
 import re
 import os
+import logging
 from enum import Enum
 from datetime import datetime , timedelta
 from rich import print as rprint
+
+#************************************************************************************************************************
+#Configure logging
+
+class CustomFormatter(logging.Formatter):
+    format = "%(levelname)s - %(asctime)s - %(name)s) %(message)s"
+
+    FORMATS = {
+        logging.DEBUG:format,
+        logging.INFO:format,
+        logging.WARNING:format,
+        logging.ERROR:format,
+        logging.CRITICAL:format
+    }
+
+    def format(self, record):
+        logFmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(logFmt)
+        return formatter.format(record)
+    
+
+logger = logging.getLogger("root")
+logger.setLevel(logging.DEBUG)
+
+fileHandler = logging.FileHandler('logfile.log')
+fileHandler.setLevel(logging.DEBUG)
+
+fileHandler.setFormatter(CustomFormatter())
+
+logger.addHandler(fileHandler)
 
 #************************************************************************************************************************
 #Functions related to login
@@ -121,6 +152,8 @@ def createNewUser():
     user = User(username, email, hashedPassword)
     user.saveUser()
 
+    logger.info(f"'{username}' has successfully created an account.")
+
     rprint("[spring_green1]Your account has been created successfully.[/spring_green1]")
 
     return user
@@ -172,6 +205,8 @@ def CheckUserInformation():
 
     user = User.loadUser(username)
 
+    logger.info(f"'{username}' has successfully logged in.")
+
     rprint("[spring_green1]You have successfully logged in.[/spring_green1]")
 
     return user
@@ -216,6 +251,8 @@ def checkAdminInformation():
         else:
             break
 
+    logger.info(f"'{username}' has successfully logged in.")
+    
     rprint("[spring_green1]You have successfully logged in.[/spring_green1]")
 
 
@@ -392,6 +429,7 @@ def adminOptions():
                     with open(filename, 'w') as f:
                         json.dump(newUser, f, indent=4)
 
+                    logger.info(f"'{username}' was banned by the admin.")
                     rprint("[spring_green1]User successfully banned.[/spring_green1]")
                     printOptionOfAdmin()
                     answ = input()
@@ -422,6 +460,7 @@ def adminOptions():
                     with open(filename, 'w') as f:
                         json.dump(newUser, f, indent=4)
 
+                    logger.info(f"'{username}' was unbanned by the admin.")
                     rprint("[spring_green1]User successfully unbanned.[/spring_green1]")
                     printOptionOfAdmin()
                     answ = input()
@@ -572,16 +611,13 @@ class User():
         return user
 
 
-    def log_in_out():
-        pass
-
     def createProject(self):
         ID = input("Enter an ID for your project: ") 
         while(True):
             if projectID_availability(ID):
                 break
             else:
-                ID = input("THis ID is already taken!\nPlease Try again:") 
+                ID = input("This ID is already taken!\nPlease Try again:") 
                      
         PrName = input("Enter a title for the project: ")
         
@@ -597,6 +633,7 @@ class User():
         self.saveUser()
         save_projectID(ID)
         project.saveProject(ID)
+        logger.info(f"Project '{ID}' was created by {self.username}.")
         return project
             
     def add_member_to_project(self, prID, username):
@@ -621,6 +658,7 @@ class User():
             #******************************************
                 
                 print(f"User {username} is now a member of {prID}.")
+                logger.info(f"'{username}' was added to Project '{prID}' by '{self.username}'.")
             else:
                 print(f"User {username} is already a member of {prID}.")
         else:
@@ -636,6 +674,7 @@ class User():
                 
                 self.saveUser()
                 print(f"User {username} was removed from project {prID}.")
+                logger.info(f"'{username}' was removed from Project '{prID}' by '{self.username}'.")
                 
                 
                 #Some error handling is needed here.!! 
@@ -663,6 +702,7 @@ class User():
                 if os.path.exists(fpath):
                     os.remove(fpath)
                     print(f"you successfuly deleted {prID}.")
+                    logger.info(f"Project '{prID}' was deleted by '{self.username}'.")
             else:
                 return None
         else:
@@ -675,9 +715,8 @@ class User():
             pr = Project.loadProject(prID)
             pr.title = newTitle
             pr.saveProject(prID)
+            logger.info(f"The title of project '{prID}' was changed to '{newTitle}' by '{self.username}'.")
 
-    def changePrID(self , prID , newID):
-        pass
     
     #@staticmethod
     def createTask(self , prID):
@@ -697,6 +736,7 @@ class User():
                     #pr.tasks[task.Status][task.Priority].append(task)
                     pr.saveProject(prID)
                     task.saveTask()
+                    logger.info(f"'{taskID}' task was created by '{self.username}'.")
                     return task
                 if answer == 2:
                     taskTitle = input("Enter a title for your task or press enter to leave it empty:")
@@ -712,6 +752,7 @@ class User():
                     pr.add_task(task)
                     pr.saveProject(prID)
                     task.saveTask()
+                    logger.info(f"'{taskID}' task was created by '{self.username}'.")
                     return task
                 break
         
@@ -719,18 +760,22 @@ class User():
         project = Project.loadProject(prID)
         task = Task.loadTask(taskID)
 
+        oldTaskPriority = task.Priority
+
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             project.remv_task(task)
             task.Priority = task.get_priority().value
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            logger.info(f"The priority of '{taskID}' task from the '{prID}' project was changed from '{oldTaskPriority}' to '{task.Priority}' by '{self.username}'.")
         elif self.username in task.Assignees:
             project.tasks[task.Status.value][task.Priority.value].remove({"taskID" : task.taskID , "taskTitle" : task.taskTitle})
             task.Priority = task.get_priority().value
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            logger.info(f"The priority of '{taskID}' task from the '{prID}' project was changed from '{oldTaskPriority}' to '{task.Priority}' by '{self.username}'.")
         else:
             print("You don't have the ability to do so")
 
@@ -738,18 +783,22 @@ class User():
         project = Project.loadProject(prID)
         task = Task.loadTask(taskID)
 
+        oldTaskStatus = task.Status
+
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             project.remv_task(task)
             task.Status = task.get_status().value
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            logger.info(f"The status of '{taskID}' task from the '{prID}' project was changed from '{oldTaskStatus}' to '{task.Status}' by '{self.username}'.")
         elif self.username in task.Assignees:
             project.remv_task(task)
             task.Status = task.get_status().value
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            logger.info(f"The status of '{taskID}' task from the '{prID}' project was changed from '{oldTaskStatus}' to '{task.Status}' by '{self.username}'.")
         else:
             print("You don't have the ability to do so")
         
@@ -764,6 +813,7 @@ class User():
                     #project.tasks[task.Status][task.Priority][index] = task
                     #project.saveProject(prID)
                     print(f"the task was assigned to {username}")
+                    logger.info(f"'{taskId}' task was assigned to '{username}' by '{self.username}' from '{prID}' project.")
                 else:
                     print("This user has already been assigned with the task")
             else:
@@ -782,6 +832,7 @@ class User():
                     task.saveTask()
 
                     print(f"{username} is not an assignee of the {task.taskTitle} anymore.")
+                    logger.info(f"'{username}' was removed from the task of '{taskID}' in the '{prID}' project by '{self.username}'.")
                 else:
                     print(f"{task.taskTitle} was not assigned to {username}")
             else:

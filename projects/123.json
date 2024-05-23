@@ -1,0 +1,46 @@
+{
+    "projectID": "123",
+    "title": "newProj",
+    "description": "",
+    "admin": "sima",
+    "members": [
+        "alex"
+    ],
+    "tasks": {
+        "BACKLOG": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [
+                {
+                    "taskID": "93f81f18-0727-40a0-b566-339522c3e562",
+                    "taskTitle": ""
+                }
+            ],
+            "CRITICAL": []
+        },
+        "TODO": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "DOING": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "DONE": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "ARCHIVED": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        }
+    }
+}
