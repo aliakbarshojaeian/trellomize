@@ -358,10 +358,15 @@ def userOptions(user):
             answ = input()
 
 
-def adminOptions():
+def printOptionOfAdmin():
     rprint("[gold3]What do you want to do?[/gold3]")
     rprint("[bright_white]1)[/bright_white][hot_pink3]Ban a user[/hot_pink3]")
-    rprint("[bright_white]2)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+    rprint("[bright_white]2)[/bright_white][hot_pink3]Unban a user[/hot_pink3]")
+    rprint("[bright_white]3)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+
+
+def adminOptions():
+    printOptionOfAdmin()
 
     answ = input()
 
@@ -378,28 +383,60 @@ def adminOptions():
                     with open('users.json', 'w') as f:
                         json.dump(users, f, indent=4)
 
+                    filename = "users/" + username + ".json"
+                    with open(filename) as f:
+                        newUser = json.load(f)
+
+                    newUser["activityStatus"] = "inactive"
+
+                    with open(filename, 'w') as f:
+                        json.dump(newUser, f, indent=4)
+
                     rprint("[spring_green1]User successfully banned.[/spring_green1]")
-                    rprint("[gold3]What do you want to do?[/gold3]")
-                    rprint("[bright_white]1)[/bright_white][hot_pink3]Ban a user[/hot_pink3]")
-                    rprint("[bright_white]2)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+                    printOptionOfAdmin()
                     answ = input()
                 else:
                     rprint("[deep_pink2]This user does not exist, try again.[/deep_pink2]")    
             except FileNotFoundError:
                 rprint("[deep_pink2]This user does not exist.[/deep_pink2]")
-                rprint("[gold3]What do you want to do?[/gold3]")
-                rprint("[bright_white]1)[/bright_white][hot_pink3]Ban a user[/hot_pink3]")
-                rprint("[bright_white]2)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+                printOptionOfAdmin()
                 answ = input()
         elif answ == "2":
+            rprint("[turquoise4]Enter the username:[/turquoise4]")
+            username = input()
+            try:
+                with open('users.json') as f:
+                    users = json.load(f)
+
+                if checkPresenceUsername(users, username):
+                    users[username]["activityStatus"] = "active"
+                    with open('users.json', 'w') as f:
+                        json.dump(users, f, indent=4)
+
+                    filename = "users/" + username + ".json"
+                    with open(filename) as f:
+                        newUser = json.load(f)
+
+                    newUser["activityStatus"] = "active"
+
+                    with open(filename, 'w') as f:
+                        json.dump(newUser, f, indent=4)
+
+                    rprint("[spring_green1]User successfully unbanned.[/spring_green1]")
+                    printOptionOfAdmin()
+                    answ = input()
+                else:
+                    rprint("[deep_pink2]This user does not exist, try again.[/deep_pink2]")    
+            except FileNotFoundError:
+                rprint("[deep_pink2]This user does not exist.[/deep_pink2]")
+                printOptionOfAdmin()
+                answ = input()
+        elif answ == "3":
             rprint("[orange_red1]Come back soon dear.[/orange_red1]")
             exit()
         else:
             rprint("[deep_pink2]The answer is invalid, try again.[/deep_pink2]")
-            rprint("[gold3]What do you want to do?[/gold3]")
-            rprint("[bright_white]1)[/bright_white][hot_pink3]Ban a user[/hot_pink3]")
-            rprint("[bright_white]2)[/bright_white][hot_pink3]Quit[/hot_pink3]")
-
+            printOptionOfAdmin()
             answ = input()
 
 
@@ -753,7 +790,6 @@ class User():
             print("Only admin of a project could do this!")
 
 
-    #ask about that
     def delTask(self , prID , taskID):
         prj = Project.loadProject(prID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:

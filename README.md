@@ -1,4 +1,4 @@
-TRELLOMIZE 
+TRELLOMIZE
 
 For now, you can create an account or log in if you already have an account; You can also create an admin account and delete data. To create an admin account, enter the following command in the terminal:
 
@@ -8,6 +8,6 @@ To delete all stored data, enter the following command in the terminal:
 
 python manager.py purge-data
 
-Also, the admin can ban a user after logging into his account.
+Also, the admin can ban or unban a user after logging into his account.
 
 More options have been added to the user's menu, allowing him to create a new project, a new task, and other related items.
