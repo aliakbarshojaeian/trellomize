@@ -3,6 +3,7 @@ import json
 import hashlib
 import os
 import glob
+import shutil
 from rich import print as rprint
 
 def hashPassword(password):
@@ -26,9 +27,21 @@ def deleteFilesWithExtension(extension):
     for file in files:
         try:
             os.remove(file)
-            print(f"'{file}' deleted successfully.")
+            rprint(f"'{file}' [spring_green1]deleted successfully.[/spring_green1]")
         except OSError as e:
             print(f"Error: {e}")
+
+
+def deleteDir(newDir):
+    """
+    A function to delete a directory.
+    """
+    try:
+        shutil.rmtree(newDir)
+        rprint(f"'{newDir}' [spring_green1]deleted successfully.[/spring_green1]")
+    except FileNotFoundError as e:
+        rprint("[deep_pink2]There are no files to delete.[/deep_pink2]")
+        exit()
 
 
 def createAdmin():
@@ -54,6 +67,9 @@ def createAdmin():
             message = input()
             if message == "yes":
                 deleteFilesWithExtension("json")
+                deleteDir("users")
+                deleteDir("tasks")
+                deleteDir("projects")
                 break
             elif message == "no":
                 break

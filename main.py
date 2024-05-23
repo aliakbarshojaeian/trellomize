@@ -790,6 +790,7 @@ class User():
             print("Only admin of a project could do this!")
 
 
+    #ask about that
     def delTask(self , prID , taskID):
         prj = Project.loadProject(prID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
