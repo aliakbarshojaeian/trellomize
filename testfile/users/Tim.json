@@ -1,0 +1,65 @@
+{
+    "Username": "Tim",
+    "Email": "Tim@gmail.com",
+    "Password": "qwert",
+    "activityStatus": "Active",
+    "loginStatus": "logged in",
+    "Projects": {
+        "test": {
+            "ProjectName": "1234",
+            "Admin": "Tim",
+            "Members": [],
+            "tasks": [
+                {
+                    "taskID": "150c95aa-4d1f-475e-8320-17a68d749ccc",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "b1e565fc-18e7-474a-88a9-a68baf433113",
+                    "taskTitle": ""
+                },
+                "3dcd61ed-f6c0-4618-b6be-709036eb7132",
+                {
+                    "taskID": "e0096890-942d-4ee1-8d61-c38af8d54c37",
+                    "taskTitle": ""
+                },
+                "45a0a7c2-9368-434a-afc0-f43823d92fff",
+                {
+                    "taskID": "bd96a131-2221-415c-b333-5476077f0e05",
+                    "taskTitle": "khkdkudsh"
+                },
+                {
+                    "taskID": "db1d51a3-3b0c-46e5-88d7-6f6ce036b71b",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "d1125843-1a35-4765-9356-22f55264d9bf",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "ad603b3e-b297-44b7-8bf7-56fbbc598828",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "84946b05-6e38-4027-be2d-3ca2226c9ed5",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "c77d9285-b5c2-43a6-a116-a0cd53084282",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "4d07417a-9f1f-45f8-a6f3-8f122b9d5f8f",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "73211bfe-fbe6-4756-85ef-6430ba545e7d",
+                    "taskTitle": ""
+                }
+            ]
+        }
+    },
+    "assignedProjects": [
+        "sectest"
+    ]
+}

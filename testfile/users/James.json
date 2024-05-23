@@ -1,0 +1,62 @@
+{
+    "Username": "James",
+    "Email": "Tim@gmail.com",
+    "Password": "qwert",
+    "activityStatus": "Active",
+    "loginStatus": "logged in",
+    "Projects": {
+        "sectest": {
+            "ProjectName": "mornin",
+            "Admin": "James",
+            "Members": [
+                "Tim"
+            ],
+            "tasks": [
+                {
+                    "taskID": "e008b00f-a9ce-46a3-917c-739760388b85",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "9b099c1d-fe7c-4f72-b181-376c0c4a73a4",
+                    "taskTitle": "newone"
+                },
+                {
+                    "taskID": "b0865bc5-586d-4fb9-816d-fe476e9522f7",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "0715350b-edd9-4ab3-bc5a-678c6d98d320",
+                    "taskTitle": ""
+                }
+            ]
+        },
+        "final": {
+            "ProjectName": "isit",
+            "Admin": "James",
+            "Members": [],
+            "tasks": [
+                {
+                    "taskID": "4ec23c2b-3efa-40ce-b51e-bb7eba2d4d63",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "3d84cb2f-74ea-436f-9142-01e973016503",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "2fe7ef5d-5b52-46a7-a645-6c87cb7eee08",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "c71204eb-3c8c-49f5-a3f3-19a8ec77afc7",
+                    "taskTitle": ""
+                },
+                {
+                    "taskID": "4d39fbd2-e7a2-41ba-b84e-b129b9038a70",
+                    "taskTitle": ""
+                }
+            ]
+        }
+    },
+    "assignedProjects": []
+}

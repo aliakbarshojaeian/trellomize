@@ -1,0 +1,44 @@
+{
+    "projectID": "final",
+    "title": "isit",
+    "description": "",
+    "admin": "James",
+    "members": [],
+    "tasks": {
+        "BACKLOG": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "TODO": {
+            "LOW": [],
+            "MEDIUM": [
+                {
+                    "taskID": "4d39fbd2-e7a2-41ba-b84e-b129b9038a70",
+                    "taskTitle": ""
+                }
+            ],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "DOING": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "DONE": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        },
+        "ARCHIVED": {
+            "LOW": [],
+            "MEDIUM": [],
+            "HIGH": [],
+            "CRITICAL": []
+        }
+    }
+}
