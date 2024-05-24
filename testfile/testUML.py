@@ -226,6 +226,7 @@ class User():
                     #pr.tasks[task.Status][task.Priority].append(task)
                     pr.saveProject(prID)
                     task.saveTask()
+                    task.saveHistory(f"The {task.taskID} was created by {self.username}.")
                     return task
                 if answer == 2:
                     taskTitle = input("Enter a title for your task or press enter to leave it empty:")
@@ -241,6 +242,7 @@ class User():
                     pr.add_task(task)
                     pr.saveProject(prID)
                     task.saveTask()
+                    task.saveHistory(f"The {task.taskID} was created by {self.username}.")
                     return task
                     
                 
@@ -252,6 +254,7 @@ class User():
     def change_priority(self , prID , taskID):
         project = Project.loadProject(prID)
         task = Task.loadTask(taskID)
+        curPriority = task.Priority.value
 
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             project.remv_task(task)
@@ -259,18 +262,21 @@ class User():
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            task.saveHistory(f" {self.username} changed this task's priority from {curPriority} to {task.Priority.value}.")
         elif self.username in task.Assignees:
             project.tasks[task.Status.value][task.Priority.value].remove({"taskID" : task.taskID , "taskTitle" : task.taskTitle})
             task.Priority = task.get_priority().value
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            task.saveHistory(f" {self.username} changed this task's priority from {curPriority} to {task.Priority.value}.")
         else:
             print("You don't have the ability to do so")
 
     def change_status(self , prID , taskID):
         project = Project.loadProject(prID)
         task = Task.loadTask(taskID)
+        curStatus = task.Status.value
 
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             project.remv_task(task)
@@ -278,12 +284,14 @@ class User():
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            task.saveHistory(f" {self.username} changed this task's priority from {curStatus} to {task.Priority.value}.")
         elif self.username in task.Assignees:
             project.remv_task(task)
             task.Status = task.get_status().value
             task.saveTask()
             project.add_task(task)
             project.saveProject(project.projectID)
+            task.saveHistory(f" {self.username} changed this task's priority from {curStatus} to {task.Priority.value}.")
         else:
             print("You don't have the ability to do so")
         
@@ -299,6 +307,7 @@ class User():
                     #project.tasks[task.Status][task.Priority][index] = task
                     #project.saveProject(prID)
                     print(f"the task was assigned to {username}")
+                    task.saveHistory(f"the task was assigned to {username}")
                 else:
                     print("This user has already been assigned with the task")
             else:
@@ -317,6 +326,7 @@ class User():
                     task.saveTask()
 
                     print(f"{username} is not an assignee of the {task.taskTitle} anymore.")
+                    task.saveHistory(f"{username} was removed from this task's assignees.")
                 else:
                     print(f"{task.taskTitle} was not assigned to {username}")
             else:
@@ -328,13 +338,56 @@ class User():
         
     def delTask(self , prID , taskID):
         prj = Project.loadProject(prID)
+        task = Task.loadTask(taskID)
+        d = 0
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            if taskID in prj.tasks:
-                pass
-    def assignTask():
-        pass
-    def showTask():
-        pass
+            #if taskID in prj.tasks:
+                #pass
+            for i in range(len(prj.tasks[task.Status][task.Priority])):
+                if prj.tasks[task.Status][task.Priority][i]["taskID"] == task.taskID:
+                    d += 1
+                    self.projects[prID]["tasks"].remove({"taskID" : taskID , "taskTitle" : task.taskTitle})
+                    del prj.tasks[task.Status][task.Priority][i]
+                    self.saveUser()
+                    prj.saveProject(prj.projectID)
+                    if os.path.exists("tasks/" + task.taskID + ".json"):
+                        os.remove("tasks/" + task.taskID + ".json")
+                    else:
+                        print("task file does not exist!!")
+
+            if (d == 0):
+                print("the task does not belong to this project!")
+        else:
+            print("Only admin of a project could do this!")
+                
+        
+    def addComment(self , prID , taskID , newComment):
+        task = Task.loadTask(taskID)
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            task.comments.append(newComment)
+            task.saveHistory(f"{self.username} added a comment.")
+            task.saveTask()
+        elif self.username in task.Assignees:
+            task.comments.append(newComment)
+            task.saveHistory(f"{self.username} added a comment.")
+            task.saveTask()
+        else:
+            print("Only the task's assignees could do that!")
+
+    def clearComments(self , prID , taskID , newComment):
+        task = Task.loadTask(taskID)
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            task.comments.clear()
+            task.saveHistory(f"{self.username} cleared the comments.")
+            task.saveTask()
+        elif self.username in task.Assignees:
+            task.comments.clear()
+            task.saveHistory(f"{self.username} cleared the comments.")
+            task.saveTask()
+        else:
+            print("Only the task's assignees could do that!")
+            
+
 
     
 class Project:
@@ -422,7 +475,7 @@ class Task:
         self.deadlineDT = deadlineDT if deadlineDT else (datetime.now() + timedelta(hours=24)).isoformat()
         self.Assignees = []
         self.History = {}
-        self.comments = {}
+        self.comments = []
 
     @staticmethod
     def get_priority():
@@ -458,7 +511,8 @@ class Task:
             "deadlineDT": self.deadlineDT,
             "Priority": self.Priority,
             "Status": self.Status,
-            "Assignees": self.Assignees
+            "Assignees": self.Assignees,
+            "Comments" : self.comments
         }
 
         filename = "tasks/" + self.taskID + ".json"
@@ -486,10 +540,44 @@ class Task:
         )
         task.Assignees = data["Assignees"]
         task.Description = data["taskDescription"]
+        task.comments = data["Comments"]
         return task
     """it'll be done soon. nothing much"""
-    def saveHistory(self , username , historyNote):
-        pass
+    def saveHistory(self , historyNote):
+        
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        note = f"[{current_time}] : {historyNote}\n"
+        fpath = "tasks/History/history-" + self.taskID + ".txt"
+        
+        try:
+            with open(fpath, "a") as file:
+                file.write(note)
+
+        except FileNotFoundError:
+            with open(fpath , "w") as file:
+                file.write(note) 
+
+    def getHistory(self):
+        fpath = "tasks/History/history-" + self.taskID + ".txt"
+
+        try:
+            with open(fpath, "r") as file:
+                for line in file:
+                    print(line.strip())
+        except FileNotFoundError:
+            print("History file does not exist.")
+
+    def clearHistory(self):
+        fpath = "tasks/History/history-" + self.taskID + ".txt"
+
+        try:
+            with open(fpath, "w") as file:
+                file.write("")
+        except FileNotFoundError:
+            print("History file does not exist.")
+
+    
+        
 
 
         
@@ -522,5 +610,5 @@ class Task:
     """
     
 if __name__ == "__main__":
-    
+
     pass
