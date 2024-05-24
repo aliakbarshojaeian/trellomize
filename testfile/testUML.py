@@ -81,19 +81,22 @@ class User():
     def loadUser(username):
         filename = "users/" + username + ".json"
         #the error handling part will be complete later!!!
-
-        with open(filename, 'r') as jsonFile:
-            data = json.load(jsonFile)
-        user = User(
-            username=data["Username"] , 
-            email=data["Email"] , 
-            hashedPassword=data["Password"]            
-        )
-        user.activityStatus=data["activityStatus"]
-        user.loginStatus=data["loginStatus"]
-        user.projects=data["Projects"]
-        user.assignedProjects=data["assignedProjects"]
-        return user
+        if os.path.exists(filename):
+            with open(filename, 'r') as jsonFile:
+                data = json.load(jsonFile)
+            user = User(
+                username=data["Username"] , 
+                email=data["Email"] , 
+                hashedPassword=data["Password"]            
+            )
+            user.activityStatus=data["activityStatus"]
+            user.loginStatus=data["loginStatus"]
+            user.projects=data["Projects"]
+            user.assignedProjects=data["assignedProjects"]
+            return user
+        else:
+            print(f"User {username} does not exist.")
+            return None
 
 
     def log_in_out():
@@ -139,12 +142,11 @@ class User():
                 
                 self.projects[prID]["Members"].append(username)
                 self.saveUser()
-            #need to fix this later:
+ 
                 addedMember = User.loadUser(username)
                 addedMember.assignedProjects.append(prID)
                 addedMember.saveUser()
-            #******************************************
-                
+
                 print(f"User {username} is now a member of {prID}.")
             else:
                 print(f"User {username} is already a member of {prID}.")
@@ -153,7 +155,7 @@ class User():
         
     def remove_user_from_project(self , prID, username):
 
-        # some error handlings are yet to get complete
+  
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             if username in self.projects[prID]["Members"]:
                 
@@ -161,9 +163,7 @@ class User():
                 
                 self.saveUser()
                 print(f"User {username} was removed from project {prID}.")
-                
-                
-                #Some error handling is needed here.!! 
+
                 removed_user = User.loadUser(username)
                 removed_user.assignedProjects.remove(prID) 
                 removed_user.saveUser()
@@ -188,6 +188,8 @@ class User():
                 if os.path.exists(fpath):
                     os.remove(fpath)
                     print(f"you successfuly deleted {prID}.")
+                else:
+                    print(f"The {prID} file does not exist!")
 
 
             else:
@@ -203,10 +205,16 @@ class User():
             pr = Project.loadProject(prID)
             pr.title = newTitle
             pr.saveProject(prID)
+        else:
+            print("Only the admin of the project could do that!")
 
-    def changePrID(self , prID , newID):
-        pass
-    
+    def changeDescription(self , prID):
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            pr = Project.loadProject(prID)
+            newDescrp = input("Enter the new description or press enter to CLEAR it:")
+            pr.description = newDescrp
+            pr.saveProject(pr.projectID)
+
     #@staticmethod
     def createTask(self , prID):
 
@@ -361,13 +369,15 @@ class User():
             print("Only admin of a project could do this!")
                 
         
-    def addComment(self , prID , taskID , newComment):
+    def addComment(self , prID , taskID):
         task = Task.loadTask(taskID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            newComment = input("Enter your comment:")
             task.comments.append(newComment)
             task.saveHistory(f"{self.username} added a comment.")
             task.saveTask()
         elif self.username in task.Assignees:
+            newComment = input("Enter your comment:")
             task.comments.append(newComment)
             task.saveHistory(f"{self.username} added a comment.")
             task.saveTask()
@@ -387,6 +397,32 @@ class User():
         else:
             print("Only the task's assignees could do that!")
             
+    def change_task_title(self , prID , taskID):
+        task = Task.loadTask(taskID)
+        project = Project.loadProject(prID)
+
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            newTiltle = input("Enter a new title:")
+            project.remv_task(task)
+            task.taskTitle = newTiltle
+            task.saveTask()
+            project.add_task(task)
+            project.saveProject(prID)
+            task.saveHistory(f"{self.username} changed the task's titile to {newTiltle}.")
+
+        else:
+            print("Only the admin could do that!")
+
+    def change_task_deadline(self , prID , taskID):
+        task = Task.loadTask(taskID)
+
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            newddline = input("Enter the date and time (YYYY-MM-DDTHH:MM:SS): ")
+            task.deadlineDT = newddline
+            task.saveTask()
+            task.saveHistory(f"{self.username} changed the task's deadline to {newddline}.")
+        else:
+            print("Only the admin could do that!")
 
 
     
@@ -458,6 +494,9 @@ class Project:
                     organized_tasks[status][priority].append(task)
         
         return organized_tasks
+    
+    def display_tasks_by_coordinate(self):
+        pass
     
 
 
