@@ -374,7 +374,7 @@ class User():
         else:
             print("Only the task's assignees could do that!")
 
-    def clearComments(self , prID , taskID , newComment):
+    def clearComments(self , prID , taskID):
         task = Task.loadTask(taskID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             task.comments.clear()
