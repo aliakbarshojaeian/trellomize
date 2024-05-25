@@ -1,0 +1,12 @@
+{
+    "taskID": "2971e9df-8b47-4a57-81df-4fa779b721a8",
+    "taskTitle": "",
+    "taskDescription": "",
+    "createdDT": "2024-05-25T23:34:04.645842",
+    "deadlineDT": "2024-05-26T23:34:04.645842",
+    "Priority": "HIGH",
+    "Status": "DOING",
+    "Assignees": [
+        "alex"
+    ]
+}

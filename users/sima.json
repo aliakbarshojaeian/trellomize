@@ -2,18 +2,18 @@
     "Username": "sima",
     "Email": "sima@gmail.com",
     "Password": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-    "activityStatus": "active",
+    "activityStatus": "inactive",
     "loginStatus": "logged in",
     "Projects": {
         "123": {
-            "ProjectName": "newProj",
+            "ProjectName": "new project",
             "Admin": "sima",
             "Members": [
                 "alex"
             ],
             "tasks": [
                 {
-                    "taskID": "93f81f18-0727-40a0-b566-339522c3e562",
+                    "taskID": "2971e9df-8b47-4a57-81df-4fa779b721a8",
                     "taskTitle": ""
                 }
             ]

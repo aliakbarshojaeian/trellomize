@@ -6,7 +6,7 @@ import glob
 import shutil
 from rich import print as rprint
 
-def hashPassword(password):
+def hashPassword(password : str) -> None:
     """
     A function to hash a password.
     """
@@ -19,7 +19,7 @@ def hashPassword(password):
     return hashedPassword
 
 
-def deleteFilesWithExtension(extension):
+def deleteFilesWithExtension(extension) -> None:
     """
     A function to delete files based on their extension.
     """
@@ -32,7 +32,7 @@ def deleteFilesWithExtension(extension):
             print(f"Error: {e}")
 
 
-def deleteDir(newDir):
+def deleteDir(newDir) -> None:
     """
     A function to delete a directory.
     """
@@ -44,7 +44,7 @@ def deleteDir(newDir):
         exit()
 
 
-def createAdmin():
+def adminActions() -> None:
     parser = argparse.ArgumentParser(description='Manager script')
     parser.add_argument('action', choices=['create-admin', 'purge-data'], help='Action to perform')
     parser.add_argument('--username', help='Username for admin')
@@ -79,4 +79,4 @@ def createAdmin():
 
 
 if __name__ == "__main__":
-    createAdmin()
+    adminActions()

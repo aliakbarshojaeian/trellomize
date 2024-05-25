@@ -1,0 +1,4 @@
+[2024-05-25 23:34:04] : The 2971e9df-8b47-4a57-81df-4fa779b721a8 was created by sima.
+[2024-05-25 23:34:38] :  sima changed this task's priority from LOW to HIGH.
+[2024-05-25 23:35:16] :  sima changed this task's priority from BACKLOG to DOING.
+[2024-05-25 23:37:38] : the task was assigned to alex

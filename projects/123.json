@@ -1,6 +1,6 @@
 {
     "projectID": "123",
-    "title": "newProj",
+    "title": "new project",
     "description": "",
     "admin": "sima",
     "members": [
@@ -10,12 +10,7 @@
         "BACKLOG": {
             "LOW": [],
             "MEDIUM": [],
-            "HIGH": [
-                {
-                    "taskID": "93f81f18-0727-40a0-b566-339522c3e562",
-                    "taskTitle": ""
-                }
-            ],
+            "HIGH": [],
             "CRITICAL": []
         },
         "TODO": {
@@ -27,7 +22,12 @@
         "DOING": {
             "LOW": [],
             "MEDIUM": [],
-            "HIGH": [],
+            "HIGH": [
+                {
+                    "taskID": "2971e9df-8b47-4a57-81df-4fa779b721a8",
+                    "taskTitle": ""
+                }
+            ],
             "CRITICAL": []
         },
         "DONE": {
