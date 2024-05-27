@@ -1,0 +1,1548 @@
+import uuid
+import hashlib
+import json
+import re
+import os
+import logging
+from enum import Enum
+from datetime import datetime , timedelta
+from rich import print as rprint
+from typing import Type
+from rich.console import Console
+from rich.table import Table
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+def tableOfProjects(newList : list) -> None:
+    newTable = Table()
+        
+    newTable.add_column("ROWS", style="cyan3")
+    newTable.add_column("PROJECT ID", style="orange1")
+    
+    i = 1
+    for proj in newList:
+        newTable.add_row(str(i), proj)
+        i += 1
+
+    print()
+    console = Console()
+    console.print(newTable)
+    print()
+
+
+
+def tableOfAssignees(newList : list) -> None:
+    newTable = Table()
+        
+    newTable.add_column("ROWS", style="cyan3")
+    newTable.add_column("ASSIGNEES", style="orange1")
+    
+    i = 1
+    for assignee in newList:
+        newTable.add_row(str(i), assignee)
+        i += 1
+
+    console = Console()
+    print()
+    console.print(newTable)
+    print()
+
+
+
+def showTask(taskID : str):
+    filename = "tasks/" + taskID + ".json"
+
+    historyFile = "tasks/History/history-" + taskID + ".txt"
+
+    if not os.path.exists(filename):
+        print("Task not found!")
+        return None
+
+    with open(filename, 'r') as jsonFile:
+        task = json.load(jsonFile) 
+
+
+    if not os.path.exists(historyFile):
+        print("History not found!")
+        return None
+
+    with open(historyFile, 'r') as f:
+        history = f.readlines()
+
+    rprint("[light_coral]************************************************************************************************************************[/light_coral]")
+    print("Task information:")
+    print()
+    print("task title: ", task["taskTitle"])
+    print()
+
+    print("task description: ", task["taskDescription"])
+    print()
+#********* change with printDatetime()
+    print("createdDT: ", task["createdDT"])
+    print()
+
+    print("deadlineDT: ", task["deadlineDT"])
+    print()
+
+    print("Assignees:")
+    tableOfAssignees(task["Assignees"])
+    
+    print("History:")
+    print()
+    for line in history:
+        rprint(f"[cyan3]{line}[/cyan3]")
+    
+    rprint("[light_coral]************************************************************************************************************************[/light_coral]")
+    
+    
+
+#def createTable(prID : str, admin : str, tasks : dict) -> None:
+#    projTitle = f"project : '{prID}', admin : '{admin}'"
+#    main_table = Table(title=projTitle)
+#    main_table.add_column("BACKLOG", style="orange_red1")
+#    main_table.add_column("TODO", style="hot_pink3")
+#    main_table.add_column("DOING", style="orange1")
+#    main_table.add_column("DONE", style="cyan3")
+#    main_table.add_column("ARCHIVED", style="spring_green3")
+#
+#
+#    def create_nested_table(priority, task_list):
+#        nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+#        
+#        nested_table.add_column("ROWS")
+#        """not neccessary"""
+#        #nested_table.add_column("TASK ID")
+#        nested_table.add_column("TASK TITLE")
+#    
+#        i = 1
+#        for task in task_list:
+#            nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+#            i += 1
+#
+#        return nested_table
+#
+#
+#    rows_data = {key: [] for key in tasks.keys()}
+#
+#    for status, priorities in tasks.items():
+#        for priority, task_list in priorities.items():
+#            if task_list:
+#                nested_table = create_nested_table(priority, task_list)
+#                rows_data[status].append(nested_table)
+#
+#    max_rows = max(len(rows) for rows in rows_data.values())
+#
+#    for i in range(max_rows):
+#        row = []
+#        for status in tasks.keys():
+#            if i < len(rows_data[status]):
+#                nested_table = rows_data[status][i]
+#                row.append(nested_table)
+#            else:
+#                row.append("")
+#        main_table.add_row(*row)
+#
+#    console = Console()
+#    console.print(main_table)
+#
+#    while(True):
+#        print("What do you want to do?")
+#        print("1)view a task.")
+#        print("2)back")
+#        inp = input()
+#
+#        if inp == "1":
+#            #print("Enter the task status:")
+#            s = Task.get_status().value
+#            #print("Enter the priority of the task:")
+#            p = Task.get_priority().value
+#            print("Enter the desired task row number:")
+#            row = int(input())
+#
+#            try:
+#                task_id = tasks[s][p][row - 1]["taskID"] 
+#                showTask(task_id)
+#            except Exception:
+#                print("Something went wrong, try again.")
+#        elif inp == "2":
+#            break
+#        else:
+#            print("Invalid answer, try again.")
+
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+#Configure logging
+
+class CustomFormatter(logging.Formatter):
+    """
+    A class to create a custom format for the log file.
+    """
+    format = "%(levelname)s - %(asctime)s - %(name)s) %(message)s"
+
+    FORMATS = {
+        logging.DEBUG:format,
+        logging.INFO:format,
+        logging.WARNING:format,
+        logging.ERROR:format,
+        logging.CRITICAL:format
+    }
+
+    def format(self, record):
+        logFmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(logFmt)
+        return formatter.format(record)
+    
+
+logger = logging.getLogger("root")
+logger.setLevel(logging.DEBUG)
+
+fileHandler = logging.FileHandler('logfile.log')
+fileHandler.setLevel(logging.DEBUG)
+
+fileHandler.setFormatter(CustomFormatter())
+
+logger.addHandler(fileHandler)
+
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+#Project related functions
+
+def generate_unique_id() -> str:
+    return str(uuid.uuid4())
+
+
+def load_projectIDs(filename = "projectsID.json") -> set:
+    if not os.path.exists(filename):
+        return set()
+    
+    with open(filename, 'r') as file:
+        pIDs = json.load(file)
+    return set(pIDs)
+
+
+def save_projectID(pID : str , filename = "projectsID.json") -> None:
+    project_ids = load_projectIDs(filename)
+    project_ids.add(pID)
+    
+    with open(filename, 'w') as file:
+        json.dump(list(project_ids) , file , indent=4)
+
+
+def projectID_availability(projectID : str , filename = "projectsID.json") -> bool:
+    project_ids = load_projectIDs(filename)
+    return projectID not in project_ids
+
+
+class Priority(Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class Status(Enum):
+    BACKLOG = "BACKLOG"
+    TODO = "TODO"
+    DOING = "DOING"
+    DONE = "DONE"
+    ARCHIVED = "ARCHIVED"
+
+
+#***********************************************************************************************************************************************************
+#*********************************************************************************************************************************************************** 
+class Task:
+    def __init__(self , taskID , taskTitle="" , description="" , priority=Priority.LOW , status=Status.BACKLOG , createdDT=None , deadlineDT=None):
+
+        self.taskID = taskID
+        self.taskTitle = taskTitle
+        self.Priority = priority.value
+        self.Status = status.value
+        self.Description = description
+        self.createdDT = createdDT if createdDT else datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self.deadlineDT = deadlineDT if deadlineDT else ( datetime.strptime(self.createdDT, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
+        self.Assignees = []
+        self.History = {}
+        self.comments = {}
+
+
+    @staticmethod
+    def get_priority():
+        while True:
+            print("Select priority level:")
+            for priority in Priority:
+                print(f"{priority.value}")
+            
+            prio = input("Enter the priority (LOW, MEDIUM, HIGH, CRITICAL) or press enter for defaulting to LOW: ").strip().capitalize()
+            if prio == "":
+                return Priority.LOW
+            
+            try:
+                return Priority[prio.upper()]
+            except KeyError:
+                print("Invalid priority. Please try again.")
+
+    @staticmethod    
+    def get_status():
+        while True:
+            print("Select task's status:")
+            for status in Status:
+                print(f"{status.value}")
+            
+            statu = input("Enter the status you want (BACKLOG, TODO, DOING , DONE , ARCHIVED) or press enter for defaulting to BACKLOG: ").strip().capitalize()
+            if statu == "":
+                return Status.BACKLOG
+            
+            try:
+                return Status[statu.upper()]
+            except KeyError:
+                print("Invalid status. Please try again.")
+
+
+    def saveTask(self) -> None:
+        taskData = {
+            "taskID": self.taskID,
+            "taskTitle": self.taskTitle,
+            "taskDescription": self.Description,
+            "createdDT": self.createdDT,
+            "deadlineDT": self.deadlineDT,
+            "Priority": self.Priority,
+            "Status": self.Status,
+            "Assignees": self.Assignees
+        }
+
+        filename = "tasks/" + self.taskID + ".json"
+        with open(filename, 'w') as jsonFile:
+            json.dump(taskData, jsonFile, indent=4)
+
+
+    @staticmethod
+    def loadTask(taskID : str):
+        filename = "tasks/" + str(taskID) + ".json"
+        if not os.path.exists(filename):
+            print("Task not found!")
+            return None
+
+        with open(filename, 'r') as jsonFile:
+            data = json.load(jsonFile)
+            
+            
+        task = Task(
+            taskID=data["taskID"], 
+            taskTitle=data["taskTitle"],  
+            priority=Priority[data["Priority"]], 
+            status=Status[data["Status"]],
+            createdDT=data["createdDT"],
+            deadlineDT=data["deadlineDT"]
+        )
+        task.Assignees = data["Assignees"]
+        task.Description = data["taskDescription"]
+        return task
+
+    
+    def saveHistory(self , historyNote : str) -> None:
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        note = f"[{current_time}] : {historyNote}\n"
+        fpath = "tasks/History/history-" + self.taskID + ".txt"
+        
+        try:
+            with open(fpath, "a") as file:
+                file.write(note)
+
+        except FileNotFoundError:
+            with open(fpath , "w") as file:
+                file.write(note) 
+
+
+    def getHistory(self) -> None:
+        fpath = "tasks/History/history-" + self.taskID + ".txt"
+
+        try:
+            with open(fpath, "r") as file:
+                for line in file:
+                    print(line.strip())
+        except FileNotFoundError:
+            print("History file does not exist.")
+
+
+    def clearHistory(self) -> None:
+        fpath = "tasks/History/history-" + self.taskID + ".txt"
+
+        try:
+            with open(fpath, "w") as file:
+                file.write("")
+        except FileNotFoundError:
+            print("History file does not exist.")
+
+#&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+    @staticmethod
+    def get_valid_datetime(kind , startT = ""):
+            if kind == "Start":
+                s = "to use the current time"
+                s1 = "starting"
+            else:
+                s = "for 24H after the starting time"
+                s1 = "deadline"
+            while True:
+                inp = input(f"Enter the {s1} datetime in the format 'YYYY-MM-DDTHH:MM:SS' \n (or press Enter {s}): ")
+                if  kind == "Start":   
+                    if inp == "":
+                        return datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                    try:
+                        dt = datetime.strptime(inp , "%Y-%m-%dT%H:%M:%S")
+                        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+                        
+                    except ValueError:
+                        print("Incorrect format.Try again.")
+                else:
+                    d = datetime.strptime(startT , "%Y-%m-%dT%H:%M:%S")
+                    if inp == "":
+                        return (d + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
+                    try:
+                        dt = datetime.strptime(inp , "%Y-%m-%dT%H:%M:%S")
+                        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+                    except ValueError:
+                        print("Incorrect format.Try again.")
+
+
+       
+    def printDatetime(self , kind):
+        if kind == "Start": 
+            datetime_str = self.createdDT
+        else:
+            datetime_str = self.deadlineDT
+        dt = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%S")
+        now = datetime.now()
+        
+        if kind == "Start":       
+            if dt > now:
+                prefix = "will start at"
+            else:
+                prefix = "started at"
+
+        else:
+            if dt < now:
+                prefix = "it ended in"
+            else:
+                prefix = "it ends in"
+
+        DateNote = dt.strftime(f"{prefix} %A %B %d' at %H:%M:%S")
+
+        day = dt.day
+        if 4 <= day <= 20 or 24 <= day <= 30:
+            suffix = "th"
+        else:
+            suffix = ["st", "nd", "rd"][day % 10 - 1]
+
+        DateNote = DateNote.replace(f"{day}'", f"{day}{suffix}'")
+
+        return DateNote
+
+
+            
+
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+class Project:
+    def __init__(self , projectID, title , admin):
+        self.projectID = projectID
+        self.title = title
+        self.description = ""
+        self.admin = admin
+        self.members = []
+        self.tasks = {"BACKLOG" : {"LOW" : [] , "MEDIUM" : [] , "HIGH" : [] , "CRITICAL" : []} ,
+                       "TODO" : {"LOW" : [] , "MEDIUM" : [] , "HIGH" : [] , "CRITICAL" : []},
+                      "DOING" : {"LOW" : [] , "MEDIUM" : [] , "HIGH" : [] , "CRITICAL" : []} ,
+                        "DONE" : {"LOW" : [] , "MEDIUM" : [] , "HIGH" : [] , "CRITICAL" : []} ,
+                          "ARCHIVED" : {"LOW" : [] , "MEDIUM" : [] , "HIGH" : [] , "CRITICAL" : []}
+                          }
+        
+
+    def add_task(self, task : Type[Task]) -> None:
+
+        self.tasks[task.Status][task.Priority].append({"taskID" : task.taskID , "taskTitle" : task.taskTitle})
+
+
+    def remv_task(self, task : Type[Task]) -> None:
+
+        self.tasks[task.Status][task.Priority].remove({"taskID" : task.taskID , "taskTitle" : task.taskTitle})    
+
+
+    def saveProject(self, prID : str) -> None:
+        filename = "projects/" + prID + ".json"
+        projectData = {
+            "projectID": self.projectID,
+            "title": self.title,
+            "description": self.description,
+            "admin": self.admin,
+            "members": self.members,
+            "tasks": self.tasks
+        }
+        with open(filename, 'w') as jsonFile:
+            json.dump(projectData, jsonFile, indent=4)
+
+
+    @staticmethod
+    def loadProject(prID : str):
+        filename = "projects/" + prID + ".json"
+        if not os.path.exists(filename):
+            print("Project not found!")
+            return None
+
+        with open(filename, 'r') as jsonFile:
+            data = json.load(jsonFile)
+            
+        project = Project(
+            projectID=data["projectID"], 
+            title=data["title"], 
+            admin=data["admin"]
+        )
+        project.description = data["description"]
+        project.members = data["members"]
+        project.tasks = data["tasks"]
+        return project
+    
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+class User():
+    def __init__(self , username=None , email=None , hashedPassword=None):
+        self.username = username
+        self.email = email
+        self.hapassword = hashedPassword
+        #self.isManager = isManager
+        self.projects = {}
+        self.assignedProjects = []
+        self.activityStatus = "Active"
+        self.loginStatus = "logged in"
+        #self.isAdmin = isAdmin
+
+
+    def saveUser(self) -> None:
+        filename = "users/"+ self.username + ".json"
+        userData = {
+            "Username" : self.username ,
+            "Email" : self.email ,
+            "Password" : self.hapassword ,
+            "activityStatus" : self.activityStatus, 
+            "loginStatus" : self.loginStatus ,
+            "Projects" : self.projects,
+            "assignedProjects" : self.assignedProjects
+        }
+        
+        with open(filename, 'w') as jsonFile:
+            json.dump(userData, jsonFile , indent=4)
+
+
+    @staticmethod
+    def loadUser(username : str):
+        filename = "users/" + username + ".json"
+        if os.path.exists(filename):
+            with open(filename, 'r') as jsonFile:
+                data = json.load(jsonFile)
+            user = User(
+                username=data["Username"] , 
+                email=data["Email"] , 
+                hashedPassword=data["Password"]            
+            )
+            user.activityStatus=data["activityStatus"]
+            user.loginStatus=data["loginStatus"]
+            user.projects=data["Projects"]
+            user.assignedProjects=data["assignedProjects"]
+            return user
+        else:
+            print(f"User {username} does not exist.")
+            return None
+        
+
+    def createProject(self) -> Type[Project]:
+        ID = input("Enter an ID for your project: ") 
+        while(True):
+            if projectID_availability(ID):
+                break
+            else:
+                ID = input("This ID is already taken!\nPlease Try again:") 
+                     
+        PrName = input("Enter a title for the project: ")
+        
+        project = Project(ID , PrName , self.username)
+        #project.saveProject(ID + ".json")
+        self.projects[ID] = {
+            "ProjectName": PrName,
+            "Admin": self.username,
+            "Members": [],
+            "tasks" : []
+        }
+        
+        self.saveUser()
+        save_projectID(ID)
+        project.saveProject(ID)
+        logger.info(f"Project '{ID}' was created by {self.username}.")
+        return project
+    
+            
+    def add_member_to_project(self, prID : str, username : str) -> None:
+        # adding a member to the chosen pr
+           
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            if username not in self.projects[prID]["Members"]:
+                # load the pr with the ID and add member to it
+                #fname = "projects/" + prID + ".json"
+                pr = Project.loadProject(prID)
+                pr.members.append(username)
+                pr.saveProject(prID)
+                
+                #add member to member part of prj
+                
+                self.projects[prID]["Members"].append(username)
+                self.saveUser()
+            
+                addedMember = User.loadUser(username)
+                addedMember.assignedProjects.append(prID)
+                addedMember.saveUser()
+            
+                print(f"User {username} is now a member of {prID}.")
+                logger.info(f"'{username}' was added to Project '{prID}' by '{self.username}'.")
+            else:
+                print(f"User {username} is already a member of {prID}.")
+        else:
+            print("You do not have permission to add members to this project.")
+
+        
+    def remove_user_from_project(self , prID : str, username : str) -> None:
+
+        # some error handlings are yet to get complete
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            if username in self.projects[prID]["Members"]:
+                
+                self.projects[prID]["Members"].remove(username)
+                
+                self.saveUser()
+                print(f"User {username} was removed from project {prID}.")
+                logger.info(f"'{username}' was removed from Project '{prID}' by '{self.username}'.")
+                 
+                removed_user = User.loadUser(username)
+                removed_user.assignedProjects.remove(prID) 
+                removed_user.saveUser()
+
+                #fname = "projects/" + prID + ".json"
+                pr = Project.loadProject(prID)
+                pr.members.remove(username)
+                pr.saveProject(prID)                   
+            else:
+                print(f"User {username} is not a member of {prID}.")
+        else:
+            print("You do not have permission to remove members from this project.")
+
+
+    def delete_project(self , prID):
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            
+            answer = input("Are you sure You wanna delete this project?\nYou can't change your decision later!! \n (yes or no)")
+            if answer == "yes":
+                fpath = "projects/" + prID + ".json"
+
+                task_ids = [task["taskID"] for task in self.projects[prID]["tasks"]]
+
+                del self.projects[prID]
+                self.saveUser()
+                if os.path.exists(fpath):
+                    os.remove(fpath)
+                    print(f"you successfuly deleted {prID}.")
+                else:
+                    print(f"The {prID} file does not exist!")
+
+                for task_id in task_ids:
+                    taskFpath = "tasks/" + str(task_id) + ".json"
+                    if os.path.exists(taskFpath):
+                        os.remove(taskFpath)
+                        #print(f"Deleted task file: {taskFpath}")
+                    else:
+                        #print(f"Task file {taskFpath} does not exist!")
+                        continue
+
+
+            else:
+                return None
+            
+        else:
+            print("You do not have permission to delete projects!!")
+
+            
+    def Retitle_Pr(self , prID : str , newTitle : str) -> None:
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            self.projects[prID]["ProjectName"] = newTitle
+            self.saveUser()
+            pr = Project.loadProject(prID)
+            pr.title = newTitle
+            pr.saveProject(prID)
+            logger.info(f"The title of project '{prID}' was changed to '{newTitle}' by '{self.username}'.")
+        else:
+            print("Only the admin of the project could do that!")
+
+
+    def changeDescription(self , prID : str) -> None:
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            pr = Project.loadProject(prID)
+            newDescrp = input("Enter the new description or press enter to CLEAR it:")
+            pr.description = newDescrp
+            pr.saveProject(pr.projectID)
+
+    
+    #@staticmethod
+    def createTask(self , prID):
+
+        pr = Project.loadProject(prID)
+        taskID = generate_unique_id()
+        while(True):
+            answer = int(input("1.generate a default task? \n 2.create your own task? \n Enter (1 or 2):"))            
+            if answer != 1 and answer != 2:
+                print("Invalid input , try Again!")
+
+            else:
+                if answer == 1:
+                    task = Task(taskID)
+                    self.projects[prID]["tasks"].append({"taskID" : taskID , "taskTitle" : task.taskTitle})
+                    self.saveUser()
+                    pr.add_task(task)
+                    #pr.tasks[task.Status][task.Priority].append(task)
+                    pr.saveProject(prID)
+                    task.saveTask()
+                    task.saveHistory(f"The {task.taskID} was created by {self.username}.")
+                    return task
+                if answer == 2:
+                    taskTitle = input("Enter a title for your task or press enter to leave it empty:")
+                    taskDescription = input("description to your task or press enter to leave it empty:")
+                    createdDT = Task.get_valid_datetime("Start")
+                    print(createdDT)
+                    deadlineDT = Task.get_valid_datetime("Deadline" , createdDT)
+                    priority = Task.get_priority()
+                    status = Task.get_status()
+
+                    task = Task(taskID , taskTitle , taskDescription , priority , status , createdDT , deadlineDT)
+                    self.projects[prID]["tasks"].append({"taskID" : taskID , "taskTitle" : task.taskTitle})
+                    self.saveUser()
+                    pr.add_task(task)
+                    pr.saveProject(prID)
+                    task.saveTask()
+                    task.saveHistory(f"The {task.taskID} was created by {self.username}.")
+                    return task
+                    
+                
+                break
+        
+
+
+    def change_priority(self , prID : str , taskID : str) -> None:
+        project = Project.loadProject(prID)
+        task = Task.loadTask(taskID)
+        curPriority = task.Priority
+
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            project.remv_task(task)
+            task.Priority = task.get_priority().value
+            task.saveTask()
+            project.add_task(task)
+            project.saveProject(project.projectID)
+            task.saveHistory(f"{self.username} changed this task's priority from {curPriority} to {task.Priority}.")
+            logger.info(f"The priority of '{taskID}' task from the '{prID}' project was changed from '{curPriority}' to '{task.Priority}' by '{self.username}'.")
+        elif self.username in task.Assignees:
+            project.tasks[task.Status.value][task.Priority.value].remove({"taskID" : task.taskID , "taskTitle" : task.taskTitle})
+            task.Priority = task.get_priority().value
+            task.saveTask()
+            project.add_task(task)
+            project.saveProject(project.projectID)
+            task.saveHistory(f"{self.username} changed this task's priority from {curPriority} to {task.Priority}.")
+            logger.info(f"The priority of '{taskID}' task from the '{prID}' project was changed from '{curPriority}' to '{task.Priority}' by '{self.username}'.")
+        else:
+            print("You don't have the ability to do so")
+
+
+    def change_status(self , prID : str , taskID : str) -> None:
+        project = Project.loadProject(prID)
+        task = Task.loadTask(taskID)
+        curStatus = task.Status
+
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            project.remv_task(task)
+            task.Status = task.get_status().value
+            task.saveTask()
+            project.add_task(task)
+            project.saveProject(project.projectID)
+            task.saveHistory(f"{self.username} changed this task's priority from {curStatus} to {task.Status}.")
+            logger.info(f"The status of '{taskID}' task from the '{prID}' project was changed from '{curStatus}' to '{task.Status}' by '{self.username}'.")
+        elif self.username in task.Assignees:
+            project.remv_task(task)
+            task.Status = task.get_status().value
+            task.saveTask()
+            project.add_task(task)
+            project.saveProject(project.projectID)
+            task.saveHistory(f"{self.username} changed this task's priority from {curStatus} to {task.Status}.")
+            logger.info(f"The status of '{taskID}' task from the '{prID}' project was changed from '{curStatus}' to '{task.Status}' by '{self.username}'.")
+        else:
+            print("You don't have the ability to do so.")
+
+
+    def add_assignee_to_task(self , prID : str , taskId : str , username : str) -> None:
+        #project = Project.loadProject(prID)
+        task = Task.loadTask(taskId)
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            if username in self.projects[prID]["Members"]:
+                if username not in task.Assignees:
+                    task.Assignees.append(username)
+                    task.saveTask()
+                    #project.tasks[task.Status][task.Priority][index] = task
+                    #project.saveProject(prID)
+                    print(f"the task was assigned to {username}")
+                    task.saveHistory(f"the task was assigned to {username}")
+                    logger.info(f"'{taskId}' task was assigned to '{username}' by '{self.username}' from '{prID}' project.")
+                else:
+                    print("This user has already been assigned with the task")
+            else:
+                print("Only the members of the project can be assigned to task!!")
+        else:
+            print("Only admin of a project could do this!")
+
+
+    def remove_assignee_from_task(self , prID : str , taskID : str , username : str) -> None:
+        
+        task = Task.loadTask(taskID)
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            if username in self.projects[prID]["Members"]:
+                if username in task.Assignees:
+
+                    task.Assignees.remove(username)
+                    task.saveTask()
+
+                    print(f"{username} is not an assignee of the {task.taskTitle} anymore.")
+                    task.saveHistory(f"{username} was removed from this task's assignees.")
+                    logger.info(f"'{username}' was removed from the task of '{taskID}' in the '{prID}' project by '{self.username}'.")
+                else:
+                    print(f"{task.taskTitle} was not assigned to {username}")
+            else:
+                print("Can't do that.the user is not a member of this project!!")
+        else:
+            print("Only admin of a project could do this!")
+
+    
+    def delTask(self , prID : str , taskID : str) -> None:
+        prj = Project.loadProject(prID)
+        task = Task.loadTask(taskID)
+        d = 0
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            #if taskID in prj.tasks:
+                #pass
+            for i in range(len(prj.tasks[task.Status][task.Priority])):
+                if prj.tasks[task.Status][task.Priority][i]["taskID"] == task.taskID:
+                    d += 1
+                    self.projects[prID]["tasks"].remove({"taskID" : taskID , "taskTitle" : task.taskTitle})
+                    del prj.tasks[task.Status][task.Priority][i]
+                    self.saveUser()
+                    prj.saveProject(prj.projectID)
+                    if os.path.exists("tasks/" + task.taskID + ".json"):
+                        os.remove("tasks/" + task.taskID + ".json")
+                        logger.info(f"'{taskID}' task was removed from the '{prID}' project by '{self.username}'.")
+                    else:
+                        print("task file does not exist!!")
+
+            if (d == 0):
+                print("the task does not belong to this project!")
+        else:
+            print("Only admin of a project could do this!")
+                
+        
+    def addComment(self , prID : str , taskID : str) -> None:
+        task = Task.loadTask(taskID)
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            newComment = input("Enter your comment:")
+            task.comments.append(newComment)
+            task.saveHistory(f"{self.username} added a comment.")
+            task.saveTask()
+            logger.info(f"'{self.username}' added a comment to '{taskID}' task from '{prID}' project.")
+        elif self.username in task.Assignees:
+            newComment = input("Enter your comment:")
+            task.comments.append(newComment)
+            task.saveHistory(f"{self.username} added a comment.")
+            task.saveTask()
+            logger.info(f"'{self.username}' added a comment to '{taskID}' task from '{prID}' project.")
+        else:
+            print("Only the task's assignees could do that!")
+
+
+    def clearComments(self , prID : str , taskID : str) -> None:
+        task = Task.loadTask(taskID)
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            task.comments.clear()
+            task.saveHistory(f"{self.username} cleared the comments.")
+            task.saveTask()
+            logger.info(f"'{self.username}' removed the '{taskID}' task comments from the '{prID}' project.")
+        elif self.username in task.Assignees:
+            task.comments.clear()
+            task.saveHistory(f"{self.username} cleared the comments.")
+            task.saveTask()
+            logger.info(f"'{self.username}' removed the '{taskID}' task comments from the '{prID}' project.")
+        else:
+            print("Only the task's assignees could do that!")
+            
+
+    def change_task_title(self , prID : str , taskID : str) -> None:
+        task = Task.loadTask(taskID)
+        project = Project.loadProject(prID)
+
+        oldTaskTitle = task.taskTitle
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            newTiltle = input("Enter a new title:")
+            project.remv_task(task)
+            task.taskTitle = newTiltle
+            task.saveTask()
+            project.add_task(task)
+            project.saveProject(prID)
+            task.saveHistory(f"{self.username} changed the task's title to {newTiltle}.")
+            logger.info(f"'{self.username}' changed the title of '{taskID}' task from '{prID}' project from '{oldTaskTitle}' to '{task.taskTitle}'")
+        else:
+            print("Only the admin could do that!")
+
+#****************************************************************************
+
+    def change_task_deadline(self , prID : str , taskID : str) -> None:
+        task = Task.loadTask(taskID)
+
+        oldTaskDeadline = task.deadlineDT
+        if prID in self.projects and self.projects[prID]["Admin"] == self.username:
+            newddline = Task.get_valid_datetime("Deadline" , task.createdDT)
+            task.deadlineDT = newddline
+            task.saveTask()
+            task.saveHistory(f"{self.username} changed the task's deadline to {newddline}.")
+            logger.info(f"'{self.username}' changed the deadline of '{taskID}' task of '{prID}' project from '{oldTaskDeadline}' to '{task.deadlineDT}'.")
+        else:
+            print("Only the admin could do that!")
+
+
+    def refresh(self):
+        d = 0
+        for i in range(len(self.assignedProjects)):
+            prID = self.assignedProjects[i - d]
+            fpath = "projects/" + prID + ".json"
+            if os.path.exists(fpath):
+                continue
+            else:
+                print(f"The {prID} appear to be deleted by its admin!")
+                self.assignedProjects.remove(self.assignedProjects[i - d])
+                d += 1
+                print("It was removed from your assigned projects!")
+        self.saveUser()
+
+
+    def showProject(self , prID : str):
+        filename = "projects/" + prID + ".json"
+
+        if not os.path.exists(filename):
+            print("Project not found!")
+            return None
+
+        with open(filename, 'r') as jsonFile:
+            data = json.load(jsonFile)
+
+
+        if (prID in self.projects and self.projects[prID]["Admin"] == self.username) or (prID in self.assignedProjects):
+            tasks = data["tasks"]
+            admin = data["admin"]
+            self.createTable(prID)
+        else:
+            print("You do not have permission to access this project.")
+
+
+    def listOfCreatedProject(self):
+        listOfProj = []
+
+        for item in self.projects:
+            listOfProj.append(item)
+
+        tableOfProjects(listOfProj)
+    
+
+    def listOfAssignedProject(self):
+        listOfProj = self.assignedProjects
+        tableOfProjects(listOfProj)
+    
+    def createTable(self, prID ) -> None:
+        project = Project.loadProject(prID)
+
+        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+        main_table = Table(title=projTitle)
+        main_table.add_column("BACKLOG", style="orange_red1")
+        main_table.add_column("TODO", style="hot_pink3")
+        main_table.add_column("DOING", style="orange1")
+        main_table.add_column("DONE", style="cyan3")
+        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+        def create_nested_table(priority, task_list):
+            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+            
+            nested_table.add_column("ROWS")
+            nested_table.add_column("TASK ID")
+            nested_table.add_column("TASK TITLE")
+        
+            i = 1
+            for task in task_list:
+                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                i += 1
+
+            return nested_table
+
+
+        tasks = project.tasks
+
+        rows_data = {key: [] for key in tasks.keys()}
+
+        for status, priorities in tasks.items():
+            for priority, task_list in priorities.items():
+                if task_list:
+                    nested_table = create_nested_table(priority, task_list)
+                    rows_data[status].append(nested_table)
+
+        max_rows = max(len(rows) for rows in rows_data.values())
+
+        for i in range(max_rows):
+            row = []
+            for status in tasks.keys():
+                if i < len(rows_data[status]):
+                    nested_table = rows_data[status][i]
+                    row.append(nested_table)
+                else:
+                    row.append("")
+            main_table.add_row(*row)
+
+        console = Console()
+        console.print(main_table)
+
+        while(True):
+            print("What do you want to do?")
+            print("1)view a task.")
+            print("2)back")
+            inp = input()
+
+            if inp == "1":
+                print("Enter the task status:")
+                s = input()
+                print("Enter the priority of the task:")
+                p = input()
+                print("Enter the desired task row number:")
+                row = int(input())
+
+                try:
+                    task_id = tasks[s][p][row - 1]["taskID"] 
+                    showTask(task_id)
+                except Exception:
+                    print("Something went wrong, try again.")
+            elif inp == "2":
+                break
+            else:
+                print("Invalid answer, try again.")
+
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+#Functions related to login
+
+def hashPassword(password : str) -> int:
+    """
+    A function to hash a password.
+    """
+    sha256Hash = hashlib.sha256()
+
+    sha256Hash.update(password.encode())
+
+    hashedPassword = sha256Hash.hexdigest()
+
+    return hashedPassword
+
+
+def checkUsernameValidity(username : str) -> bool:
+    """
+    A function to check the validity of username.
+    """
+    usernamePattern = r'^[a-zA-Z0-9_]+$'
+    if not re.match(usernamePattern, username):
+        return False
+    
+    return True
+
+
+def checkPresenceUsername(dictionary : dict, username : str) -> bool:
+    """
+    A function to check the presence of the username.
+    """
+    return username in dictionary
+
+
+def checkEmailValidity(email : str) -> bool:
+    """
+    A function to check the validity of the email address.
+    """
+    emailPattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,7}$'
+    if(re.fullmatch(emailPattern, email)):
+        return True
+    else:
+        return False
+
+
+def checkPresenceValue(dictionary : dict, key : str, email : str) -> bool:
+    """
+    A function to check the presence of email with binary search algorithm.
+    """
+    sortedItems = sorted(dictionary.items(), key=lambda item: item[1][key])
+    values = [item[1][key] for item in sortedItems]
+    left = 0
+    right = len(values) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if values[mid] == email:
+            return True
+        elif values[mid] < email:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return False
+
+
+def createNewUser() -> Type[User]:
+    """
+    A function to create new users.
+    """
+    rprint("[turquoise4]Please enter your username:[/turquoise4]")
+    username = input()
+    rprint("[turquoise4]Please enter your password:[/turquoise4]")
+    password = input()
+    rprint("[turquoise4]Please enter your Email:[/turquoise4]")
+    email = input()
+
+    hashedPassword = hashPassword(password)
+
+    try:
+        with open('users.json') as f:
+            users = json.load(f)
+    except FileNotFoundError:
+        with open('users.json', 'w') as f:
+            users = {}
+
+    while(True):
+        if not checkUsernameValidity(username):
+            rprint("[deep_pink2]Invalid username, try again.[/deep_pink2]")
+            rprint("[turquoise4]Enter your new username:[/turquoise4]")
+            username = input()
+        elif checkPresenceUsername(users, username):
+            rprint("[deep_pink2]ERROR! Duplicate username, try another username.[/deep_pink2]")
+            rprint("[turquoise4]Enter your new username:[/turquoise4]")
+            username = input()
+        elif not checkEmailValidity(email):
+            rprint("[deep_pink2]Invalid email address, try again.[/deep_pink2]")
+            rprint("[turquoise4]Enter your new email:[/turquoise4]")
+            email = input()
+        elif checkPresenceValue(users, "email",email):
+            rprint("[deep_pink2]ERROR! The email is duplicate, try another email.[/deep_pink2]")
+            rprint("[turquoise4]Enter your new email:[/turquoise4]")
+            email = input()
+        else:
+            break
+
+    newUser = {"username" : username, "password" : hashedPassword, "email" : email, "activityStatus" : "active", "loginStatus" : "logged in"}
+    
+    users[username] = newUser
+
+    with open('users.json', 'w') as f:
+        json.dump(users, f, indent=4)
+
+    user = User(username, email, hashedPassword)
+    user.saveUser()
+
+    logger.info(f"'{username}' has successfully created an account.")
+
+    rprint("[spring_green1]Your account has been created successfully.[/spring_green1]")
+
+    return user
+
+
+def CheckUserInformation() -> Type[User]:
+    """
+    A function to check the information of users that already exist in the system.
+    """
+    rprint("[turquoise4]Please enter your username:[/turquoise4]")
+    username = input()
+    rprint("[turquoise4]Please enter your password:[/turquoise4]")
+    password = input()
+
+    hashedPassword = hashPassword(password)
+
+    try:
+        with open('users.json') as f:
+            users = json.load(f)
+    except FileNotFoundError:
+        rprint("[deep_pink2]Failed attempt.[/deep_pink2]")
+        exit()
+    
+    while(True):
+        if not checkPresenceUsername(users, username):
+            rprint("[deep_pink2]Invalid username, try again.[/deep_pink2]")
+            rprint("[turquoise4]Please enter your username correctly or type [yellow2]quit[/yellow2] to exit:[/turquoise4]")
+            newInput = input()
+            if newInput == "quit":
+                exit()
+            else:
+                username = newInput
+        elif users[username]["password"] != hashedPassword:
+            rprint("[deep_pink2]Password is wrong, try again.[/deep_pink2]")
+            rprint("[turquoise4]Please enter your password correctly or type [yellow2]quit[/yellow2] to exit:[/turquoise4]")
+            newInput = input()
+            if newInput == "quit":
+                exit()
+            else:
+                password = newInput
+                hashedPassword = hashPassword(password)
+        elif users[username]["activityStatus"] == "inactive":
+            rprint("[deep_pink2]Your account is inactive, login is not possible.[/deep_pink2]")
+            exit()
+        else:
+            break
+
+    users[username]["loginStatus"] = "logged in"
+
+    user = User.loadUser(username)
+
+    logger.info(f"'{username}' has successfully logged in.")
+
+    rprint("[spring_green1]You have successfully logged in.[/spring_green1]")
+
+    return user
+
+
+def checkAdminInformation() -> None:
+    """
+    A function to check the information of admin.
+    """
+    rprint("[turquoise4]Please enter your username:[/turquoise4]")
+    username = input()
+    rprint("[turquoise4]Please enter your password:[/turquoise4]")
+    password = input()
+
+    hashedPassword = hashPassword(password)
+
+    try:
+        with open('admin.json') as f:
+            admin = json.load(f)
+    except FileNotFoundError:
+        rprint("[deep_pink2]Failed attempt.[/deep_pink2]")
+        exit()
+
+    while(True):
+        if not checkPresenceUsername(admin, username):
+            rprint("[deep_pink2]Invalid username, try again.[/deep_pink2]")
+            rprint("[turquoise4]Please enter your username correctly or type [yellow2]quit[/yellow2] to exit:[/turquoise4]")
+            newInput = input()
+            if newInput == "quit":
+                exit()
+            else:
+                username = newInput
+        elif admin[username]["password"] != hashedPassword:
+            rprint("[deep_pink2]Password is wrong, try again.[/deep_pink2]")
+            rprint("[turquoise4]Please enter your password correctly or type [yellow2]quit[/yellow2] to exit:[/turquoise4]")
+            newInput = input()
+            if newInput == "quit":
+                exit()
+            else:
+                password = newInput
+                hashedPassword = hashPassword(password)
+        else:
+            break
+
+    logger.info(f"'{username}' has successfully logged in.")
+    
+    rprint("[spring_green1]You have successfully logged in.[/spring_green1]")
+
+
+def printOptionOfUser() -> None:
+    rprint("[gold3]What do you want to do?[/gold3]")
+    rprint("[bright_white]1)[/bright_white][hot_pink3]Create a new project[/hot_pink3]")
+    rprint("[bright_white]2)[/bright_white][hot_pink3]View a project[/hot_pink3]")
+    rprint("[bright_white]3)[/bright_white][hot_pink3]Changing the title of a project[/hot_pink3]")
+    rprint("[bright_white]4)[/bright_white][hot_pink3]Add member to a project[/hot_pink3]")
+    rprint("[bright_white]5)[/bright_white][hot_pink3]Remove a member from a project[/hot_pink3]")
+    rprint("[bright_white]6)[/bright_white][hot_pink3]Delete a project[/hot_pink3]")
+    rprint("[bright_white]7)[/bright_white][hot_pink3]Create a new task[/hot_pink3]")
+    rprint("[bright_white]8)[/bright_white][hot_pink3]View a task[/hot_pink3]")
+    rprint("[bright_white]9)[/bright_white][hot_pink3]Change the priority of a task[/hot_pink3]")
+    rprint("[bright_white]10)[/bright_white][hot_pink3]Change the status of a task[/hot_pink3]")
+    rprint("[bright_white]11)[/bright_white][hot_pink3]Assigning a task to a member[/hot_pink3]")
+    rprint("[bright_white]12)[/bright_white][hot_pink3]Remove a member from a task[/hot_pink3]")
+    rprint("[bright_white]13)[/bright_white][hot_pink3]Delete a task[/hot_pink3]")
+    rprint("[bright_white]14)[/bright_white][hot_pink3]Clear the screen[/hot_pink3]")
+    rprint("[bright_white]15)[/bright_white][hot_pink3]View the list of projects created by you[/hot_pink3]")
+    rprint("[bright_white]16)[/bright_white][hot_pink3]View the list of projects assigned to you[/hot_pink3]")
+    rprint("[bright_white]17)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+
+
+def userOptions(user : Type[User]) -> None:
+
+    printOptionOfUser()
+
+    answ = input()
+
+    while(True):
+        if answ == "1":
+            project = user.createProject()
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "2":
+            prID = input("Enter the desired project ID: ")
+            user.showProject(prID)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "3":
+            prID = input("Enter the desired project ID: ")
+            newTitle = input("Enter the new title: ")
+            user.Retitle_Pr(prID, newTitle)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "4":
+            prID = input("Enter the desired project ID: ")
+            newUser = input("Enter the username of the desired user: ")
+
+            user.add_member_to_project(prID, newUser)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "5":
+            prID = input("Enter the desired project ID: ")
+            newUser = input("Enter the username of the desired user: ")
+
+            user.remove_user_from_project(prID, newUser)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "6":
+            prID = input("Enter the desired project ID: ")
+
+            user.delete_project(prID)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "7":
+            prID = input("Enter the desired project ID: ")
+
+            task = user.createTask(prID)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "8":
+            taskID = input("Enter the desired task ID: ")
+            task = Task.loadTask(taskID)
+
+            #task.showTask()
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "9":
+            prID = input("Enter the desired project ID: ")
+            taskID = input("Enter the desired task ID: ")
+
+            user.change_priority(prID , taskID)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "10":
+            prID = input("Enter the desired project ID: ")
+            taskID = input("Enter the desired task ID: ")
+
+            user.change_status(prID , taskID)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "11":
+            prID = input("Enter the desired project ID: ")
+            taskID = input("Enter the desired task ID: ")
+            newUser = input("Enter the username of the desired user: ")
+
+            user.add_assignee_to_task(prID , taskID , newUser)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "12":
+            prID = input("Enter the desired project ID: ")
+            taskID = input("Enter the desired task ID: ")
+            newUser = input("Enter the username of the desired user: ")
+
+            user.remove_assignee_from_task(prID , taskID , newUser)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "13":
+            prID = input("Enter the desired project ID: ")
+            taskID = input("Enter the desired task ID: ")
+
+            user.delTask(prID , taskID)
+
+            printOptionOfUser()
+            answ = input()
+        elif answ == "14":
+            os.system('cls')
+            printOptionOfUser()
+            answ = input()
+        elif answ == "15":
+            user.listOfCreatedProject()
+            
+            printOptionOfUser()
+            answ = input()
+        elif answ == "16":
+            user.listOfAssignedProject()
+            
+            printOptionOfUser()
+            answ = input()
+        elif answ == "17":
+            rprint("[orange_red1]Come back soon dear.[/orange_red1]")
+            exit()
+        else:
+            rprint("[deep_pink2]The answer is invalid, try again.[/deep_pink2]")
+            
+            printOptionOfUser()
+            answ = input()
+
+
+def printOptionOfAdmin() -> None:
+    rprint("[gold3]What do you want to do?[/gold3]")
+    rprint("[bright_white]1)[/bright_white][hot_pink3]Ban a user[/hot_pink3]")
+    rprint("[bright_white]2)[/bright_white][hot_pink3]Unban a user[/hot_pink3]")
+    rprint("[bright_white]3)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+
+
+def adminOptions() -> None:
+    printOptionOfAdmin()
+
+    answ = input()
+
+    while(True):
+        if answ == "1":
+            rprint("[turquoise4]Enter the username:[/turquoise4]")
+            username = input()
+            try:
+                with open('users.json') as f:
+                    users = json.load(f)
+
+                if checkPresenceUsername(users, username):
+                    users[username]["activityStatus"] = "inactive"
+                    with open('users.json', 'w') as f:
+                        json.dump(users, f, indent=4)
+
+                    filename = "users/" + username + ".json"
+                    with open(filename) as f:
+                        newUser = json.load(f)
+
+                    newUser["activityStatus"] = "inactive"
+
+                    with open(filename, 'w') as f:
+                        json.dump(newUser, f, indent=4)
+
+                    logger.info(f"'{username}' was banned by the admin.")
+                    rprint("[spring_green1]User successfully banned.[/spring_green1]")
+                    printOptionOfAdmin()
+                    answ = input()
+                else:
+                    rprint("[deep_pink2]This user does not exist, try again.[/deep_pink2]")    
+            except FileNotFoundError:
+                rprint("[deep_pink2]This user does not exist.[/deep_pink2]")
+                printOptionOfAdmin()
+                answ = input()
+        elif answ == "2":
+            rprint("[turquoise4]Enter the username:[/turquoise4]")
+            username = input()
+            try:
+                with open('users.json') as f:
+                    users = json.load(f)
+
+                if checkPresenceUsername(users, username):
+                    users[username]["activityStatus"] = "active"
+                    with open('users.json', 'w') as f:
+                        json.dump(users, f, indent=4)
+
+                    filename = "users/" + username + ".json"
+                    with open(filename) as f:
+                        newUser = json.load(f)
+
+                    newUser["activityStatus"] = "active"
+
+                    with open(filename, 'w') as f:
+                        json.dump(newUser, f, indent=4)
+
+                    logger.info(f"'{username}' was unbanned by the admin.")
+                    rprint("[spring_green1]User successfully unbanned.[/spring_green1]")
+                    printOptionOfAdmin()
+                    answ = input()
+                else:
+                    rprint("[deep_pink2]This user does not exist, try again.[/deep_pink2]")    
+            except FileNotFoundError:
+                rprint("[deep_pink2]This user does not exist.[/deep_pink2]")
+                printOptionOfAdmin()
+                answ = input()
+        elif answ == "3":
+            rprint("[orange_red1]Come back soon dear.[/orange_red1]")
+            exit()
+        else:
+            rprint("[deep_pink2]The answer is invalid, try again.[/deep_pink2]")
+            printOptionOfAdmin()
+            answ = input()
+
+
+def start() -> None:
+    rprint("[pale_violet_red1]Login as:[/pale_violet_red1]")
+    rprint("[bright_white]1)[/bright_white][navy_blue]Admin[/navy_blue]")
+    rprint("[bright_white]2)[/bright_white][navy_blue]Normal user[/navy_blue]")
+    rprint("[bright_white]3)[/bright_white][navy_blue]Quit[/navy_blue]")
+
+    answer = input()
+
+    while(True):
+        if answer == "1":
+            checkAdminInformation()
+            adminOptions()
+            break
+        elif answer == "2":
+            rprint("[deep_pink4]Welcome, you already have an account?(answer [yellow2]yes[/yellow2] or [yellow2]no[/yellow2] or To exit, type [yellow2]quit[/yellow2]):[/deep_pink4]")
+            ans = input()
+
+            while(True):
+                if ans == "no":
+                    user = createNewUser()
+                    userOptions(user)
+                    break
+                elif ans == "yes":
+                    user = CheckUserInformation()
+                    userOptions(user)
+                    break
+                elif ans == "quit":
+                    exit()
+                else:
+                    rprint("[deep_pink2]The answer is invalid, try again.[/deep_pink2]")
+                    rprint("[deep_pink4]You already have an account?(answer [yellow2]yes[/yellow2] or [yellow2]no[/yellow2] or To exit, type [yellow2]quit[/yellow2]):[/deep_pink4]")
+                    ans = input() 
+            break
+        elif answer == "3":
+            exit()
+        else:
+            rprint("[deep_pink2]The answer is invalid, try again.[/deep_pink2]")
+            rprint("[pale_violet_red1]Login as:[/pale_violet_red1]")
+            rprint("[bright_white]1)[/bright_white][navy_blue]Admin[/navy_blue]")
+            rprint("[bright_white]2)[/bright_white][navy_blue]Normal user[/navy_blue]")
+            rprint("[bright_white]3)[/bright_white][navy_blue]Quit[/navy_blue]")
+            answer = input()
+
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+if __name__ == "__main__":
+    
+    start()
