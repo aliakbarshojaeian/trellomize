@@ -1541,8 +1541,23 @@ def start() -> None:
             answer = input()
 
 
+def createFilesFolders():
+    folders = ['users', 'projects', 'tasks', 'tasks/History']
+    file_path = os.path.join('projectsID.json')
+
+    for folder in folders:
+        path = os.path.join(folder)
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print(f"Created folder: {path}")
+
+    if not os.path.exists(file_path):
+        with open(file_path, 'w') as f:
+            json.dump({}, f) #it creates empty json file
+
+
 #***********************************************************************************************************************************************************
 #***********************************************************************************************************************************************************
 if __name__ == "__main__":
-    
+    createFilesFolders()
     start()
