@@ -8,6 +8,45 @@ from enum import Enum
 from datetime import datetime , timedelta
 from rich import print as rprint
 from typing import Type
+from rich.console import Console
+from rich.table import Table
+
+#***********************************************************************************************************************************************************
+#***********************************************************************************************************************************************************
+def tableOfProjects(newList : list) -> None:
+    newTable = Table()
+        
+    newTable.add_column("ROWS", style="cyan3")
+    newTable.add_column("PROJECT ID", style="chartreuse2")
+    
+    i = 1
+    for proj in newList:
+        newTable.add_row(str(i), proj)
+        i += 1
+
+    print()
+    console = Console()
+    console.print(newTable)
+    print()
+
+
+
+def tableOfAssignees(newList : list) -> None:
+    newTable = Table()
+        
+    newTable.add_column("ROWS", style="cyan3")
+    newTable.add_column("ASSIGNEES", style="chartreuse2")
+    
+    i = 1
+    for assignee in newList:
+        newTable.add_row(str(i), assignee)
+        i += 1
+
+    console = Console()
+    print()
+    console.print(newTable)
+    print()
+
 
 #***********************************************************************************************************************************************************
 #***********************************************************************************************************************************************************
@@ -92,45 +131,54 @@ class Status(Enum):
 #***********************************************************************************************************************************************************
 #*********************************************************************************************************************************************************** 
 class Task:
-    def __init__(self , taskID , taskTitle="" , description="" , priority=Priority.LOW , status=Status.BACKLOG , createdDT=None , deadlineDT=None):
+    def __init__(self , taskID , taskTitle="noTitle" , description="" , priority=Priority.LOW , status=Status.BACKLOG , createdDT=None , deadlineDT=None):
 
         self.taskID = taskID
         self.taskTitle = taskTitle
         self.Priority = priority.value
         self.Status = status.value
         self.Description = description
-        self.createdDT = createdDT if createdDT else datetime.now().isoformat()
-        self.deadlineDT = deadlineDT if deadlineDT else (datetime.now() + timedelta(hours=24)).isoformat()
+        self.createdDT = createdDT if createdDT else datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self.deadlineDT = deadlineDT if deadlineDT else ( datetime.strptime(self.createdDT, "%Y-%m-%dT%H:%M:%S") + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
         self.Assignees = []
         self.History = {}
-        self.comments = {}
+        self.comments = []
 
 
     @staticmethod
-    def get_priority() -> Priority:
-        print("Select priority level:")
-        for priority in Priority:
-            print(f"{priority.value}")
-        
-        prio = input("Enter the priority (LOW, MEDIUM, HIGH, CRITICAL) or press enter for defaulting to LOW: ").strip().capitalize()
-        try:
-            return Priority[prio.upper()]
-        except KeyError:
-            print("Invalid priority.Defaulting to LOW.")
-            return Priority.LOW
+    def get_priority():
+        while True:
+            rprint("[turquoise4]Select priority level:[/turquoise4]")
 
+            for priority in Priority:
+                print(f"{priority.value}")
+            rprint("[turquoise4]Enter the priority (LOW, MEDIUM, HIGH, CRITICAL) or press enter for defaulting to LOW:[/turquoise4]")
+            prio = input().strip().capitalize()
+            if prio == "":
+                return Priority.LOW
+            
+            try:
+                return Priority[prio.upper()]
+            except KeyError:
+                rprint("[deep_pink2]Invalid priority. Please try again.[/deep_pink2]")
 
     @staticmethod    
-    def get_status() -> Status:
-        print("Select task's status:")
-        for status in Status:
-            print(f"{status.value}")
-        statu = input("Enter the status you want (BACKLOG, TODO, DOING , DONE , ARCHIVED ) or press enter for defaulting to BACKLOG: ").strip().capitalize()
-        try:
-            return Status[statu.upper()]
-        except:
-            print("Invalid priority.Defaulting to BACKLOG.")
-            return Status.BACKLOG
+    def get_status():
+        while True:
+            rprint("[turquoise4]Select task's status:[/turquoise4]")
+            for status in Status:
+                print(f"{status.value}")
+            rprint("[turquoise4]Enter the status you want (BACKLOG, TODO, DOING , DONE , ARCHIVED) or press enter for defaulting to BACKLOG: [/turquoise4]")
+            
+            statu = input().strip().capitalize()
+            if statu == "":
+                return Status.BACKLOG
+            
+            try:
+                return Status[statu.upper()]
+            except KeyError:
+                rprint("[deep_pink2]Invalid status. Please try again.[/deep_pink2]")
+                
 
 
     def saveTask(self) -> None:
@@ -142,7 +190,8 @@ class Task:
             "deadlineDT": self.deadlineDT,
             "Priority": self.Priority,
             "Status": self.Status,
-            "Assignees": self.Assignees
+            "Assignees": self.Assignees,
+            "Comments" : self.comments
         }
 
         filename = "tasks/" + self.taskID + ".json"
@@ -151,10 +200,10 @@ class Task:
 
 
     @staticmethod
-    def loadTask(taskID):
+    def loadTask(taskID : str):
         filename = "tasks/" + str(taskID) + ".json"
         if not os.path.exists(filename):
-            print("Task not found!")
+            rprint("[deep_pink2]Task not found![/deep_pink2]")
             return None
 
         with open(filename, 'r') as jsonFile:
@@ -171,6 +220,7 @@ class Task:
         )
         task.Assignees = data["Assignees"]
         task.Description = data["taskDescription"]
+        task.comments = data["Comments"]
         return task
 
     
@@ -196,7 +246,8 @@ class Task:
                 for line in file:
                     print(line.strip())
         except FileNotFoundError:
-            print("History file does not exist.")
+            rprint("[deep_pink2]History file does not exist.[/deep_pink2]")
+            
 
 
     def clearHistory(self) -> None:
@@ -206,11 +257,71 @@ class Task:
             with open(fpath, "w") as file:
                 file.write("")
         except FileNotFoundError:
-            print("History file does not exist.")
+            rprint("[deep_pink2]History file does not exist.[/deep_pink2]")
+            
+
+    @staticmethod
+    def get_valid_datetime(kind , startT = ""):
+            if kind == "Start":
+                s = "to use the current time"
+                s1 = "starting"
+            else:
+                s = "for 24H after the starting time"
+                s1 = "deadline"
+            while True:
+                rprint(f"[turquoise4]Enter the {s1} datetime in the format 'YYYY-MM-DDTHH:MM:SS'\n(or press Enter {s}):[/turquoise4]")
+                inp = input()
+                if  kind == "Start":   
+                    if inp == "":
+                        return datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                    try:
+                        dt = datetime.strptime(inp , "%Y-%m-%dT%H:%M:%S")
+                        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+                        
+                    except ValueError:
+                        rprint("[deep_pink2]Incorrect format.Try again.[/deep_pink2]")
+                else:
+                    d = datetime.strptime(startT , "%Y-%m-%dT%H:%M:%S")
+                    if inp == "":
+                        return (d + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
+                    try:
+                        dt = datetime.strptime(inp , "%Y-%m-%dT%H:%M:%S")
+                        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+                    except ValueError:
+                        rprint("[deep_pink2]Incorrect format.Try again.[/deep_pink2]")
 
 
-    def showTask():
-        pass
+    def printDatetime(self , kind):
+        if kind == "Start": 
+            datetime_str = self.createdDT
+        else:
+            datetime_str = self.deadlineDT
+        dt = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%S")
+        now = datetime.now()
+        
+        if kind == "Start":       
+            if dt > now:
+                prefix = "will start at"
+            else:
+                prefix = "started at"
+
+        else:
+            if dt < now:
+                prefix = "it ended in"
+            else:
+                prefix = "it ends in"
+
+        DateNote = dt.strftime(f"{prefix} %A %B %d' at %H:%M:%S")
+
+        day = dt.day
+        if 4 <= day <= 20 or 24 <= day <= 30:
+            suffix = "th"
+        else:
+            suffix = ["st", "nd", "rd"][day % 10 - 1]
+
+        DateNote = DateNote.replace(f"{day}'", f"{day}{suffix}'")
+
+        return DateNote
 
 
 #***********************************************************************************************************************************************************
@@ -258,7 +369,7 @@ class Project:
     def loadProject(prID : str):
         filename = "projects/" + prID + ".json"
         if not os.path.exists(filename):
-            print("Project not found!")
+            rprint("[deep_pink2]Project not found![/deep_pink2]")
             return None
 
         with open(filename, 'r') as jsonFile:
@@ -274,27 +385,6 @@ class Project:
         project.tasks = data["tasks"]
         return project
     
-
-    def organize_tasks(self) -> dict:
-        organized_tasks = {status: {priority: [] for priority in Priority} for status in Status}
-        
-        for status in Status:
-            for priority in Priority:
-                taskLists = self.tasks[status.value][priority.value]
-                for taskList in taskLists:
-                    print(taskList["taskID"])
-                    task = Task.loadTask(taskList["taskID"])
-                    organized_tasks[status][priority].append(task)
-        
-        return organized_tasks
-    
-
-    def display_tasks_by_coordinate(self):
-        pass
-
-    
-    def showProject():
-        pass
 
 #***********************************************************************************************************************************************************
 #***********************************************************************************************************************************************************
@@ -349,14 +439,17 @@ class User():
         
 
     def createProject(self) -> Type[Project]:
-        ID = input("Enter an ID for your project: ") 
+        rprint("[turquoise4]Enter an ID for your project:[/turquoise4]")
+        ID = input() 
         while(True):
             if projectID_availability(ID):
                 break
             else:
-                ID = input("This ID is already taken!\nPlease Try again:") 
+                rprint("[deep_pink2]This ID is already taken, Please Try again:[/deep_pink2]")
+                ID = input() 
                      
-        PrName = input("Enter a title for the project: ")
+        rprint("[turquoise4]Enter a title for the project:[/turquoise4]")
+        PrName = input()
         
         project = Project(ID , PrName , self.username)
         #project.saveProject(ID + ".json")
@@ -374,18 +467,12 @@ class User():
         return project
     
             
-    def add_member_to_project(self, prID : str, username : str) -> None:
-        # adding a member to the chosen pr
-           
+    def add_member_to_project(self, prID : str, username : str) -> None:  
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             if username not in self.projects[prID]["Members"]:
-                # load the pr with the ID and add member to it
-                #fname = "projects/" + prID + ".json"
                 pr = Project.loadProject(prID)
                 pr.members.append(username)
                 pr.saveProject(prID)
-                
-                #add member to member part of prj
                 
                 self.projects[prID]["Members"].append(username)
                 self.saveUser()
@@ -394,56 +481,67 @@ class User():
                 addedMember.assignedProjects.append(prID)
                 addedMember.saveUser()
             
-                print(f"User {username} is now a member of {prID}.")
+                rprint(f"[spring_green2]User {username} is now a member of {prID}.[/spring_green2]")
                 logger.info(f"'{username}' was added to Project '{prID}' by '{self.username}'.")
             else:
-                print(f"User {username} is already a member of {prID}.")
+                rprint(f"[deep_pink2]User {username} is already a member of {prID}.[/deep_pink2]")
         else:
-            print("You do not have permission to add members to this project.")
+            print("[deep_pink2]You do not have permission to add members to this project.[/deep_pink2]")
 
         
     def remove_user_from_project(self , prID : str, username : str) -> None:
-
-        # some error handlings are yet to get complete
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             if username in self.projects[prID]["Members"]:
                 
                 self.projects[prID]["Members"].remove(username)
                 
                 self.saveUser()
-                print(f"User {username} was removed from project {prID}.")
+                rprint(f"[spring_green2]User {username} was removed from project {prID}.[/spring_green2]")
                 logger.info(f"'{username}' was removed from Project '{prID}' by '{self.username}'.")
                  
                 removed_user = User.loadUser(username)
                 removed_user.assignedProjects.remove(prID) 
                 removed_user.saveUser()
 
-                #fname = "projects/" + prID + ".json"
                 pr = Project.loadProject(prID)
                 pr.members.remove(username)
                 pr.saveProject(prID)                   
             else:
-                print(f"User {username} is not a member of {prID}.")
+                rprint(f"[deep_pink2]User {username} is not a member of {prID}.[/deep_pink2]")
         else:
-            print("You do not have permission to remove members from this project.")
+            rprint("[deep_pink2]You do not have permission to remove members from this project.[/deep_pink2]")
 
 
-    def delete_project(self , prID : str) -> None:
+    def delete_project(self , prID):
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            
-            answer = input("Are you sure You wanna delete this project?\nYou can't change your decision later!! \n (yes or no)")
+            rprint("[turquoise4]Are you sure You wanna delete this project? You can't change your decision later!(yes or no)[/turquoise4]")
+            answer = input()
             if answer == "yes":
                 fpath = "projects/" + prID + ".json"
+
+                task_ids = [task["taskID"] for task in self.projects[prID]["tasks"]]
+
                 del self.projects[prID]
                 self.saveUser()
                 if os.path.exists(fpath):
                     os.remove(fpath)
-                    print(f"you successfuly deleted {prID}.")
-                    logger.info(f"Project '{prID}' was deleted by '{self.username}'.")
+                    rprint(f"[spring_green2]you successfuly deleted {prID}.[/spring_green2]")
+                else:
+                    rprint(f"[deep_pink2]The {prID} file does not exist![/deep_pink2]")
+
+                for task_id in task_ids:
+                    taskFpath = "tasks/" + str(task_id) + ".json"
+                    if os.path.exists(taskFpath):
+                        os.remove(taskFpath)
+                        #print(f"Deleted task file: {taskFpath}")
+                    else:
+                        #print(f"Task file {taskFpath} does not exist!")
+                        continue
             else:
                 return None
+            
         else:
-            print("You do not have permission to delete projects!!")
+            rprint("[deep_pink2]You do not have permission to delete projects!![/deep_pink2]")
 
             
     def Retitle_Pr(self , prID : str , newTitle : str) -> None:
@@ -455,25 +553,29 @@ class User():
             pr.saveProject(prID)
             logger.info(f"The title of project '{prID}' was changed to '{newTitle}' by '{self.username}'.")
         else:
-            print("Only the admin of the project could do that!")
+            rprint("[deep_pink2]Only the admin of the project could do that![/deep_pink2]")
 
 
     def changeDescription(self , prID : str) -> None:
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
             pr = Project.loadProject(prID)
-            newDescrp = input("Enter the new description or press enter to CLEAR it:")
+            rprint("[turquoise4]Enter the new description or press enter to CLEAR it:[/turquoise4]")
+            newDescrp = input()
             pr.description = newDescrp
             pr.saveProject(pr.projectID)
 
     
     #@staticmethod
-    def createTask(self , prID : str) -> Type[Task]:
+    def createTask(self , prID):
+
         pr = Project.loadProject(prID)
         taskID = generate_unique_id()
         while(True):
-            answer = int(input("1.generate a default task? \n 2.create your own task? \n Enter (1 or 2):"))            
+            rprint("[turquoise4]1.generate a default task?\n 2.create your own task?\n Enter (1 or 2):[/turquoise4]")
+            answer = int(input())            
             if answer != 1 and answer != 2:
-                print("Invalid input , try Again!")
+                rprint("[deep_pink2]Invalid input , try Again![/deep_pink2]")
+
             else:
                 if answer == 1:
                     task = Task(taskID)
@@ -484,13 +586,14 @@ class User():
                     pr.saveProject(prID)
                     task.saveTask()
                     task.saveHistory(f"The {task.taskID} was created by {self.username}.")
-                    logger.info(f"'{taskID}' task was created by '{self.username}'.")
                     return task
                 if answer == 2:
-                    taskTitle = input("Enter a title for your task or press enter to leave it empty:")
-                    taskDescription = input("description to your task or press enter to leave it empty:")
-                    createdDT = input("Enter the starting date and time or ptess enter for the current time.\n example: (YYYY-MM-DD HH:MM:SS)")
-                    deadlineDT = input("Enter the deadline date and time or ptess enter for 24H after the starting time.\n example: (YYYY-MM-DD HH:MM:SS)")
+                    rprint("[turquoise4]Enter a title for your task or press enter to leave it empty:[/turquoise4]")
+                    taskTitle = input()
+                    rprint("[turquoise4]description to your task or press enter to leave it empty:[/turquoise4]")
+                    taskDescription = input()
+                    createdDT = Task.get_valid_datetime("Start")
+                    deadlineDT = Task.get_valid_datetime("Deadline" , createdDT)
                     priority = Task.get_priority()
                     status = Task.get_status()
 
@@ -501,9 +604,9 @@ class User():
                     pr.saveProject(prID)
                     task.saveTask()
                     task.saveHistory(f"The {task.taskID} was created by {self.username}.")
-                    logger.info(f"'{taskID}' task was created by '{self.username}'.")
                     return task
                 break
+        
 
 
     def change_priority(self , prID : str , taskID : str) -> None:
@@ -528,7 +631,7 @@ class User():
             task.saveHistory(f"{self.username} changed this task's priority from {curPriority} to {task.Priority}.")
             logger.info(f"The priority of '{taskID}' task from the '{prID}' project was changed from '{curPriority}' to '{task.Priority}' by '{self.username}'.")
         else:
-            print("You don't have the ability to do so")
+            rprint("[deep_pink2]You don't have the ability to do so[/deep_pink2]")
 
 
     def change_status(self , prID : str , taskID : str) -> None:
@@ -552,9 +655,8 @@ class User():
             project.saveProject(project.projectID)
             task.saveHistory(f"{self.username} changed this task's priority from {curStatus} to {task.Status}.")
             logger.info(f"The status of '{taskID}' task from the '{prID}' project was changed from '{curStatus}' to '{task.Status}' by '{self.username}'.")
-
         else:
-            print("You don't have the ability to do so")
+            rprint("[deep_pink2]You don't have the ability to do so.[/deep_pink2]")
 
 
     def add_assignee_to_task(self , prID : str , taskId : str , username : str) -> None:
@@ -567,15 +669,15 @@ class User():
                     task.saveTask()
                     #project.tasks[task.Status][task.Priority][index] = task
                     #project.saveProject(prID)
-                    print(f"the task was assigned to {username}")
+                    rprint(f"[spring_green2]the task was assigned to {username}[/spring_green2]")
                     task.saveHistory(f"the task was assigned to {username}")
                     logger.info(f"'{taskId}' task was assigned to '{username}' by '{self.username}' from '{prID}' project.")
                 else:
-                    print("This user has already been assigned with the task")
+                    rprint("[deep_pink2]This user has already been assigned with the task[/deep_pink2]")
             else:
-                print("Only the members of the project can be assigned to task!!")
+                rprint("[deep_pink2]Only the members of the project can be assigned to task!![/deep_pink2]")
         else:
-            print("Only admin of a project could do this!")
+            rprint("[deep_pink2]Only admin of a project could do this![/deep_pink2]")
 
 
     def remove_assignee_from_task(self , prID : str , taskID : str , username : str) -> None:
@@ -588,15 +690,15 @@ class User():
                     task.Assignees.remove(username)
                     task.saveTask()
 
-                    print(f"{username} is not an assignee of the {task.taskTitle} anymore.")
+                    rprint(f"[spring_green2]{username} is not an assignee of the {task.taskTitle} anymore.[spring_green2]")
                     task.saveHistory(f"{username} was removed from this task's assignees.")
                     logger.info(f"'{username}' was removed from the task of '{taskID}' in the '{prID}' project by '{self.username}'.")
                 else:
-                    print(f"{task.taskTitle} was not assigned to {username}")
+                    rprint(f"[deep_pink2]{task.taskTitle} was not assigned to {username}[/deep_pink2]")
             else:
-                print("Can't do that.the user is not a member of this project!!")
+                rprint("[deep_pink2]Can't do that.the user is not a member of this project!![/deep_pink2]")
         else:
-            print("Only admin of a project could do this!")
+            rprint("[deep_pink2]Only admin of a project could do this![/deep_pink2]")
 
     
     def delTask(self , prID : str , taskID : str) -> None:
@@ -617,30 +719,32 @@ class User():
                         os.remove("tasks/" + task.taskID + ".json")
                         logger.info(f"'{taskID}' task was removed from the '{prID}' project by '{self.username}'.")
                     else:
-                        print("task file does not exist!!")
+                        rprint("[deep_pink2]task file does not exist!![/deep_pink2]")
 
             if (d == 0):
-                print("the task does not belong to this project!")
+                rprint("[deep_pink2]the task does not belong to this project![/deep_pink2]")
         else:
-            print("Only admin of a project could do this!")
+            rprint("[deep_pink2]Only admin of a project could do this![/deep_pink2]")
                 
         
     def addComment(self , prID : str , taskID : str) -> None:
         task = Task.loadTask(taskID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            newComment = input("Enter your comment:")
+            rprint("[turquoise4]Enter your comment:[/turquoise4]")
+            newComment = input()
             task.comments.append(newComment)
             task.saveHistory(f"{self.username} added a comment.")
             task.saveTask()
             logger.info(f"'{self.username}' added a comment to '{taskID}' task from '{prID}' project.")
         elif self.username in task.Assignees:
-            newComment = input("Enter your comment:")
+            rprint("[turquoise4]Enter your comment:[/turquoise4]")
+            newComment = input()
             task.comments.append(newComment)
             task.saveHistory(f"{self.username} added a comment.")
             task.saveTask()
             logger.info(f"'{self.username}' added a comment to '{taskID}' task from '{prID}' project.")
         else:
-            print("Only the task's assignees could do that!")
+            rprint("[deep_pink2]Only the task's assignees could do that![/deep_pink2]")
 
 
     def clearComments(self , prID : str , taskID : str) -> None:
@@ -656,7 +760,7 @@ class User():
             task.saveTask()
             logger.info(f"'{self.username}' removed the '{taskID}' task comments from the '{prID}' project.")
         else:
-            print("Only the task's assignees could do that!")
+            rprint("[deep_pink2]Only the task's assignees could do that![/deep_pink2]")
             
 
     def change_task_title(self , prID : str , taskID : str) -> None:
@@ -665,7 +769,8 @@ class User():
 
         oldTaskTitle = task.taskTitle
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            newTiltle = input("Enter a new title:")
+            rprint("[turquoise4]Enter a new title:[/turquoise4]")
+            newTiltle = input()
             project.remv_task(task)
             task.taskTitle = newTiltle
             task.saveTask()
@@ -674,7 +779,8 @@ class User():
             task.saveHistory(f"{self.username} changed the task's title to {newTiltle}.")
             logger.info(f"'{self.username}' changed the title of '{taskID}' task from '{prID}' project from '{oldTaskTitle}' to '{task.taskTitle}'")
         else:
-            print("Only the admin could do that!")
+            rprint("[deep_pink2]Only the admin could do that![/deep_pink2]")
+
 
 
     def change_task_deadline(self , prID : str , taskID : str) -> None:
@@ -682,24 +788,853 @@ class User():
 
         oldTaskDeadline = task.deadlineDT
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            newddline = input("Enter the date and time (YYYY-MM-DDTHH:MM:SS): ")
+            newddline = Task.get_valid_datetime("Deadline" , task.createdDT)
             task.deadlineDT = newddline
             task.saveTask()
             task.saveHistory(f"{self.username} changed the task's deadline to {newddline}.")
             logger.info(f"'{self.username}' changed the deadline of '{taskID}' task of '{prID}' project from '{oldTaskDeadline}' to '{task.deadlineDT}'.")
         else:
-            print("Only the admin could do that!")
+            rprint("[deep_pink2]Only the admin could do that![/deep_pink2]")
 
+
+    def refresh(self):
+        d = 0
+        for i in range(len(self.assignedProjects)):
+            prID = self.assignedProjects[i - d]
+            fpath = "projects/" + prID + ".json"
+            if os.path.exists(fpath):
+                continue
+            else:
+                rprint(f"[spring_green2]The {prID} appear to be deleted by its admin![/spring_green2]")
+                self.assignedProjects.remove(self.assignedProjects[i - d])
+                d += 1
+                rprint("[spring_green2]It was removed from your assigned projects![/spring_green2]")
+        self.saveUser()
+
+
+    def showProject(self , prID : str):
+        filename = "projects/" + prID + ".json"
+
+        if not os.path.exists(filename):
+            rprint("[deep_pink2]Project not found![/deep_pink2]")
+            return None
+
+        with open(filename, 'r') as jsonFile:
+            data = json.load(jsonFile)
+
+
+        if (prID in self.projects and self.projects[prID]["Admin"] == self.username) or (prID in self.assignedProjects):
+            self.createTable(prID)
+        else:
+            rprint("[deep_pink2]You do not have permission to access this project.[/deep_pink2]")
+
+
+    def listOfCreatedProject(self):
+        listOfProj = []
+
+        for item in self.projects:
+            listOfProj.append(item)
+
+        tableOfProjects(listOfProj)
     
-    def showTask():
-        pass
 
+    def listOfAssignedProject(self):
+        listOfProj = self.assignedProjects
+        tableOfProjects(listOfProj)
+
+
+    @staticmethod
+    def showTask(taskID : str):
+       
+        historyFile = "tasks/History/history-" + taskID + ".txt"
+
+        task = Task.loadTask(taskID) 
+
+        if not os.path.exists(historyFile):
+            rprint("[deep_pink2]History not found![/deep_pink2]")
+            return None
+
+        with open(historyFile, 'r') as f:
+            history = f.readlines()
+
+
+        rprint("[light_coral]************************************************************************************************************************[/light_coral]")
+        rprint("[turquoise4]Task information:[/turquoise4]")
+        print()
+        rprint("[turquoise4]task title: [/turquoise4]", task.taskTitle)
+        print()
+
+        rprint("[turquoise4]task description: [/turquoise4]", task.Description)
+        print()
+
+        startDate = task.printDatetime("Start")
+        rprint("[turquoise4]createdDT: [/turquoise4]", startDate)
+        print()
+        deadlineDate = task.printDatetime("Deadline") 
+        rprint("[turquoise4]deadlineDT: [/turquoise4]", deadlineDate)
+        print()
+
+        rprint("[turquoise4]Assignees:[/turquoise4]")
+        tableOfAssignees(task.Assignees)
+        
+        print("[turquoise4]History:[/turquoise4]")
+        print()
+        for line in history:
+            rprint(f"[cyan3]{line}[/cyan3]")
+        
+        rprint("[light_coral]************************************************************************************************************************[/light_coral]")
+
+
+    def createTable(self, prID ) -> None:
+        
+        project = Project.loadProject(prID)
+
+        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+        main_table = Table(title=projTitle)
+        main_table.add_column("BACKLOG", style="orange_red1")
+        main_table.add_column("TODO", style="hot_pink3")
+        main_table.add_column("DOING", style="orange1")
+        main_table.add_column("DONE", style="cyan3")
+        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+        def create_nested_table(priority, task_list):
+            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                
+            nested_table.add_column("ROWS")
+            nested_table.add_column("TASK ID")
+            nested_table.add_column("TASK TITLE")
+            
+            i = 1
+            for task in task_list:
+                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                i += 1
+
+            return nested_table
+
+        tasks = project.tasks
+
+        rows_data = {key: [] for key in tasks.keys()}
+
+        for status, priorities in tasks.items():
+            for priority, task_list in priorities.items():
+                if task_list:
+                    nested_table = create_nested_table(priority, task_list)
+                    rows_data[status].append(nested_table)
+
+        max_rows = max(len(rows) for rows in rows_data.values())
+
+        for i in range(max_rows):
+            row = []
+            for status in tasks.keys():
+                if i < len(rows_data[status]):
+                    nested_table = rows_data[status][i]
+                    row.append(nested_table)
+                else:
+                    row.append("")
+            main_table.add_row(*row)
+
+        def getStatusAndPrioAndRow():
+            print("Enter the task status:")
+            s = Task.get_status().value
+            print("Enter the priority of the task:")
+            p = Task.get_priority().value
+            print("Enter the desired task row number:")
+            row = int(input())
+
+            task_id = tasks[s][p][row - 1]["taskID"] 
+
+            return task_id
+        
+
+        while True:
+            console = Console()
+            console.print(main_table)
+
+            rprint("[gold3]What do you want to do?[/gold3]")
+            rprint("[bright_white]1)[/bright_white][hot_pink3]View actions related to tasks[/hot_pink3]")
+            rprint("[bright_white]2)[/bright_white][hot_pink3]Back[/hot_pink3]")
+
+            answe = input()
+
+            if answe == "1":
+                while(True):
+                    printTaskActions()
+
+                    inp = input()
+
+                    if inp == "1": 
+                        task = self.createTask(prID)
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "2":
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            print(task_id)
+                            self.showTask(task_id)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+                    elif inp == "3":
+                        try:
+                            task_id = getStatusAndPrioAndRow()
+        
+                            self.change_priority(prID , task_id)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "4":
+
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+        
+                            self.change_status(prID , task_id)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "5":
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            newUser = input("Enter the username of the desired user: ")
+                            
+                            self.add_assignee_to_task(prID , task_id , newUser)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "6":
+
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            newUser = input("Enter the username of the desired user: ") 
+
+                            self.remove_assignee_from_task(prID , task_id , newUser)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "7":
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            self.change_task_deadline(prID, task_id)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                        
+                    elif inp == "8":
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            self.change_task_title(prID, task_id)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "9":
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            commentTask = Task.loadTask(task_id)
+
+                            self.addComment(prID, commentTask.taskID)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                       
+                    elif inp == "10":
+                        try:
+                            task_id = getStatusAndPrioAndRow()
+                            commentTask = Task.loadTask(task_id)
+                            
+                            self.clearComments(prID, commentTask.taskID)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "11":
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            task = Task.loadTask(task_id)
+                            task.getHistory()
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+                        
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "12":
+                        getStatusAndPrioAndRow()
+
+                        try:
+                            task_id = getStatusAndPrioAndRow() 
+                            
+                            self.delTask(prID , task_id)
+                        except Exception:
+                            rprint("[deep_pink2]Something went wrong, try again.[/deep_pink2]")
+
+                        project = Project.loadProject(prID)
+
+                        projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                        main_table = Table(title=projTitle)
+                        main_table.add_column("BACKLOG", style="orange_red1")
+                        main_table.add_column("TODO", style="hot_pink3")
+                        main_table.add_column("DOING", style="orange1")
+                        main_table.add_column("DONE", style="cyan3")
+                        main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                        def create_nested_table(priority, task_list):
+                            nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                                
+                            nested_table.add_column("ROWS")
+                            nested_table.add_column("TASK ID")
+                            nested_table.add_column("TASK TITLE")
+                            
+                            i = 1
+                            for task in task_list:
+                                nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                                i += 1
+
+                            return nested_table
+
+                        tasks = project.tasks
+
+                        rows_data = {key: [] for key in tasks.keys()}
+
+                        for status, priorities in tasks.items():
+                            for priority, task_list in priorities.items():
+                                if task_list:
+                                    nested_table = create_nested_table(priority, task_list)
+                                    rows_data[status].append(nested_table)
+
+                        max_rows = max(len(rows) for rows in rows_data.values())
+
+                        for i in range(max_rows):
+                            row = []
+                            for status in tasks.keys():
+                                if i < len(rows_data[status]):
+                                    nested_table = rows_data[status][i]
+                                    row.append(nested_table)
+                                else:
+                                    row.append("")
+                            main_table.add_row(*row)
+                    elif inp == "13":
+                        break
+                    else:
+                        rprint("[deep_pink2]Invalid answer, try again.[/deep_pink2]")
+            elif answe == "2":
+                project = Project.loadProject(prID)
+
+                projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
+                main_table = Table(title=projTitle)
+                main_table.add_column("BACKLOG", style="orange_red1")
+                main_table.add_column("TODO", style="hot_pink3")
+                main_table.add_column("DOING", style="orange1")
+                main_table.add_column("DONE", style="cyan3")
+                main_table.add_column("ARCHIVED", style="spring_green3")
+
+
+                def create_nested_table(priority, task_list):
+                    nested_table = Table(title=priority, show_header=True, header_style="bright_white")
+                        
+                    nested_table.add_column("ROWS")
+                    nested_table.add_column("TASK ID")
+                    nested_table.add_column("TASK TITLE")
+                    
+                    i = 1
+                    for task in task_list:
+                        nested_table.add_row(str(i), task["taskID"], task["taskTitle"])
+                        i += 1
+
+                    return nested_table
+
+                tasks = project.tasks
+
+                rows_data = {key: [] for key in tasks.keys()}
+
+                for status, priorities in tasks.items():
+                    for priority, task_list in priorities.items():
+                        if task_list:
+                            nested_table = create_nested_table(priority, task_list)
+                            rows_data[status].append(nested_table)
+
+                max_rows = max(len(rows) for rows in rows_data.values())
+
+                for i in range(max_rows):
+                    row = []
+                    for status in tasks.keys():
+                        if i < len(rows_data[status]):
+                            nested_table = rows_data[status][i]
+                            row.append(nested_table)
+                        else:
+                            row.append("")
+                    main_table.add_row(*row)
+
+                break
+            else:
+                rprint("[deep_pink2]Invalid answer, try again.[/deep_pink2]")
+                
 
 #***********************************************************************************************************************************************************
 #***********************************************************************************************************************************************************
 #Functions related to login
 
-def hashPassword(password : str) -> hex:
+def hashPassword(password : str) -> int:
     """
     A function to hash a password.
     """
@@ -914,23 +1849,94 @@ def checkAdminInformation() -> None:
     rprint("[spring_green1]You have successfully logged in.[/spring_green1]")
 
 
+
+def printTaskActions():
+    rprint("[gold3]What do you want to do?[/gold3]")
+    rprint("[bright_white]1)[/bright_white][hot_pink3]Create a new task[/hot_pink3]")
+    rprint("[bright_white]2)[/bright_white][hot_pink3]View a task[/hot_pink3]")
+    rprint("[bright_white]3)[/bright_white][hot_pink3]Change the priority of a task[/hot_pink3]")
+    rprint("[bright_white]4)[/bright_white][hot_pink3]Change the status of a task[/hot_pink3]")
+    rprint("[bright_white]5)[/bright_white][hot_pink3]Assigning a task to a member[/hot_pink3]")
+    rprint("[bright_white]6)[/bright_white][hot_pink3]Remove a member from a task[/hot_pink3]")
+    rprint("[bright_white]7)[/bright_white][hot_pink3]Change task deadline[/hot_pink3]")
+    rprint("[bright_white]8)[/bright_white][hot_pink3]Change task title[/hot_pink3]")
+    rprint("[bright_white]9)[/bright_white][hot_pink3]Add a comment[/hot_pink3]")
+    rprint("[bright_white]10)[/bright_white][hot_pink3]Clear all comments[/hot_pink3]")
+    rprint("[bright_white]11)[/bright_white][hot_pink3]History[/hot_pink3]")
+    rprint("[bright_white]12)[/bright_white][hot_pink3]Delete a task[/hot_pink3]")
+    rprint("[bright_white]13)[/bright_white][hot_pink3]Back[/hot_pink3]")
+
+
+def printProjectActions():
+    rprint("[gold3]What do you want to do?[/gold3]")
+    rprint("[bright_white]1)[/bright_white][hot_pink3]View a project[/hot_pink3]")
+    rprint("[bright_white]2)[/bright_white][hot_pink3]Changing the title of a project[/hot_pink3]")
+    rprint("[bright_white]3)[/bright_white][hot_pink3]Add member to a project[/hot_pink3]")
+    rprint("[bright_white]4)[/bright_white][hot_pink3]Remove a member from a project[/hot_pink3]")
+    rprint("[bright_white]5)[/bright_white][hot_pink3]Delete a project[/hot_pink3]")
+    rprint("[bright_white]6)[/bright_white][hot_pink3]Back[/hot_pink3]")
+
+
+def projectActions(user):
+    printProjectActions()
+
+    answ = input()
+
+    while(True):
+        if answ == "1":
+            prID = input("Enter the desired project ID: ")
+            user.showProject(prID)
+
+            printProjectActions()
+            answ = input()
+        elif answ == "2":
+            prID = input("Enter the desired project ID: ")
+            newTitle = input("Enter the new title: ")
+            user.Retitle_Pr(prID, newTitle)
+
+            printProjectActions()
+            answ = input()
+        elif answ == "3":
+            prID = input("Enter the desired project ID: ")
+            newUser = input("Enter the username of the desired user: ")
+
+            user.add_member_to_project(prID, newUser)
+
+            printProjectActions()
+            answ = input()
+        elif answ == "4":
+            prID = input("Enter the desired project ID: ")
+            newUser = input("Enter the username of the desired user: ")
+
+            user.remove_user_from_project(prID, newUser)
+
+            printProjectActions()
+            answ = input()
+        elif answ == "5":
+            prID = input("Enter the desired project ID: ")
+
+            user.delete_project(prID)
+
+            printProjectActions()
+            answ = input()
+        elif answ == "6":
+            break
+        else:
+            rprint("[deep_pink2]The answer is invalid, try again.[/deep_pink2]")
+            
+            printProjectActions()
+            answ = input()
+
+
+
 def printOptionOfUser() -> None:
     rprint("[gold3]What do you want to do?[/gold3]")
     rprint("[bright_white]1)[/bright_white][hot_pink3]Create a new project[/hot_pink3]")
-    rprint("[bright_white]2)[/bright_white][hot_pink3]View a project[/hot_pink3]")
-    rprint("[bright_white]3)[/bright_white][hot_pink3]Changing the title of a project[/hot_pink3]")
-    rprint("[bright_white]4)[/bright_white][hot_pink3]Add member to a project[/hot_pink3]")
-    rprint("[bright_white]5)[/bright_white][hot_pink3]Remove a member from a project[/hot_pink3]")
-    rprint("[bright_white]6)[/bright_white][hot_pink3]Delete a project[/hot_pink3]")
-    rprint("[bright_white]7)[/bright_white][hot_pink3]Create a new task[/hot_pink3]")
-    rprint("[bright_white]8)[/bright_white][hot_pink3]View a task[/hot_pink3]")
-    rprint("[bright_white]9)[/bright_white][hot_pink3]Change the priority of a task[/hot_pink3]")
-    rprint("[bright_white]10)[/bright_white][hot_pink3]Change the status of a task[/hot_pink3]")
-    rprint("[bright_white]11)[/bright_white][hot_pink3]Assigning a task to a member[/hot_pink3]")
-    rprint("[bright_white]12)[/bright_white][hot_pink3]Remove a member from a task[/hot_pink3]")
-    rprint("[bright_white]13)[/bright_white][hot_pink3]Delete a task[/hot_pink3]")
-    rprint("[bright_white]14)[/bright_white][hot_pink3]Clear the screen[/hot_pink3]")
-    rprint("[bright_white]15)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+    rprint("[bright_white]2)[/bright_white][hot_pink3]View the list of projects created by you[/hot_pink3]")
+    rprint("[bright_white]3)[/bright_white][hot_pink3]View the list of projects assigned to you[/hot_pink3]")
+    rprint("[bright_white]4)[/bright_white][hot_pink3]Clear the screen[/hot_pink3]")
+    rprint("[bright_white]5)[/bright_white][hot_pink3]Quit[/hot_pink3]")
+
 
 
 def userOptions(user : Type[User]) -> None:
@@ -946,104 +1952,24 @@ def userOptions(user : Type[User]) -> None:
             printOptionOfUser()
             answ = input()
         elif answ == "2":
-            prID = input("Enter the desired project ID: ")
-            project = Project.loadProject(prID)
-            #project.showProject()
+            user.listOfCreatedProject()
+            
+            projectActions(user)
 
             printOptionOfUser()
             answ = input()
         elif answ == "3":
-            prID = input("Enter the desired project ID: ")
-            newTitle = input("Enter the new title: ")
-            user.Retitle_Pr(prID, newTitle)
+            user.listOfAssignedProject()
+            
+            projectActions(user)
 
             printOptionOfUser()
             answ = input()
         elif answ == "4":
-            prID = input("Enter the desired project ID: ")
-            newUser = input("Enter the username of the desired user: ")
-
-            user.add_member_to_project(prID, newUser)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "5":
-            prID = input("Enter the desired project ID: ")
-            newUser = input("Enter the username of the desired user: ")
-
-            user.remove_user_from_project(prID, newUser)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "6":
-            prID = input("Enter the desired project ID: ")
-
-            user.delete_project(prID)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "7":
-            prID = input("Enter the desired project ID: ")
-
-            task = user.createTask(prID)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "8":
-            taskID = input("Enter the desired task ID: ")
-            task = Task.loadTask(taskID)
-
-            #task.showTask()
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "9":
-            prID = input("Enter the desired project ID: ")
-            taskID = input("Enter the desired task ID: ")
-
-            user.change_priority(prID , taskID)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "10":
-            prID = input("Enter the desired project ID: ")
-            taskID = input("Enter the desired task ID: ")
-
-            user.change_status(prID , taskID)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "11":
-            prID = input("Enter the desired project ID: ")
-            taskID = input("Enter the desired task ID: ")
-            newUser = input("Enter the username of the desired user: ")
-
-            user.add_assignee_to_task(prID , taskID , newUser)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "12":
-            prID = input("Enter the desired project ID: ")
-            taskID = input("Enter the desired task ID: ")
-            newUser = input("Enter the username of the desired user: ")
-
-            user.remove_assignee_from_task(prID , taskID , newUser)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "13":
-            prID = input("Enter the desired project ID: ")
-            taskID = input("Enter the desired task ID: ")
-
-            user.delTask(prID , taskID)
-
-            printOptionOfUser()
-            answ = input()
-        elif answ == "14":
             os.system('cls')
             printOptionOfUser()
             answ = input()
-        elif answ == "15":
+        elif answ == "5":
             rprint("[orange_red1]Come back soon dear.[/orange_red1]")
             exit()
         else:
@@ -1051,6 +1977,7 @@ def userOptions(user : Type[User]) -> None:
             
             printOptionOfUser()
             answ = input()
+
 
 
 def printOptionOfAdmin() -> None:
@@ -1157,10 +2084,12 @@ def start() -> None:
             while(True):
                 if ans == "no":
                     user = createNewUser()
+                    user.refresh()
                     userOptions(user)
                     break
                 elif ans == "yes":
                     user = CheckUserInformation()
+                    user.refresh()
                     userOptions(user)
                     break
                 elif ans == "quit":
@@ -1179,6 +2108,21 @@ def start() -> None:
             rprint("[bright_white]2)[/bright_white][navy_blue]Normal user[/navy_blue]")
             rprint("[bright_white]3)[/bright_white][navy_blue]Quit[/navy_blue]")
             answer = input()
+
+
+def createFilesFolders():
+    folders = ['users', 'projects', 'tasks', 'tasks/History']
+    file_path = os.path.join('projectsID.json')
+
+    for folder in folders:
+        path = os.path.join(folder)
+        if not os.path.exists(path):
+            os.makedirs(path)
+            rprint(f"[spring_green2]Created folder: {path}[/spring_green2]")
+
+    if not os.path.exists(file_path):
+        with open(file_path, 'w') as f:
+            json.dump({}, f) #it creates empty json file
 
 
 #***********************************************************************************************************************************************************
