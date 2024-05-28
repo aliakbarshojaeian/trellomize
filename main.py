@@ -13,33 +13,15 @@ from rich.table import Table
 
 #***********************************************************************************************************************************************************
 #***********************************************************************************************************************************************************
-def tableOfProjects(newList : list) -> None:
+def makeTable(newList : list, colName : str) -> None:
     newTable = Table()
         
     newTable.add_column("ROWS", style="cyan3")
-    newTable.add_column("PROJECT ID", style="chartreuse2")
+    newTable.add_column(colName, style="chartreuse2")
     
     i = 1
-    for proj in newList:
-        newTable.add_row(str(i), proj)
-        i += 1
-
-    print()
-    console = Console()
-    console.print(newTable)
-    print()
-
-
-
-def tableOfAssignees(newList : list) -> None:
-    newTable = Table()
-        
-    newTable.add_column("ROWS", style="cyan3")
-    newTable.add_column("ASSIGNEES", style="chartreuse2")
-    
-    i = 1
-    for assignee in newList:
-        newTable.add_row(str(i), assignee)
+    for comment in newList:
+        newTable.add_row(str(i), comment)
         i += 1
 
     console = Console()
@@ -180,7 +162,7 @@ class Task:
                 rprint("[deep_pink2]Invalid status. Please try again.[/deep_pink2]")
                 
 
-
+    # func to save task to a json file
     def saveTask(self) -> None:
         taskData = {
             "taskID": self.taskID,
@@ -198,7 +180,7 @@ class Task:
         with open(filename, 'w') as jsonFile:
             json.dump(taskData, jsonFile, indent=4)
 
-
+    # func to load a task from a json file 
     @staticmethod
     def loadTask(taskID : str):
         filename = "tasks/" + str(taskID) + ".json"
@@ -223,7 +205,7 @@ class Task:
         task.comments = data["Comments"]
         return task
 
-    
+    #func to save history in a txt file    
     def saveHistory(self , historyNote : str) -> None:
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         note = f"[{current_time}] : {historyNote}\n"
@@ -259,7 +241,7 @@ class Task:
         except FileNotFoundError:
             rprint("[deep_pink2]History file does not exist.[/deep_pink2]")
             
-
+    # func to handle the validity of date and time's format inputed by the user
     @staticmethod
     def get_valid_datetime(kind , startT = ""):
             if kind == "Start":
@@ -290,7 +272,7 @@ class Task:
                     except ValueError:
                         rprint("[deep_pink2]Incorrect format.Try again.[/deep_pink2]")
 
-
+    # func to print the date and time in a sentence
     def printDatetime(self , kind):
         if kind == "Start": 
             datetime_str = self.createdDT
@@ -340,17 +322,17 @@ class Project:
                           "ARCHIVED" : {"LOW" : [] , "MEDIUM" : [] , "HIGH" : [] , "CRITICAL" : []}
                           }
         
-
+    # func to add task to project
     def add_task(self, task : Type[Task]) -> None:
 
         self.tasks[task.Status][task.Priority].append({"taskID" : task.taskID , "taskTitle" : task.taskTitle})
 
-
+    #func to remove task from project
     def remv_task(self, task : Type[Task]) -> None:
 
         self.tasks[task.Status][task.Priority].remove({"taskID" : task.taskID , "taskTitle" : task.taskTitle})    
 
-
+    # func to save a project in jason file
     def saveProject(self, prID : str) -> None:
         filename = "projects/" + prID + ".json"
         projectData = {
@@ -364,7 +346,7 @@ class Project:
         with open(filename, 'w') as jsonFile:
             json.dump(projectData, jsonFile, indent=4)
 
-
+    # func to load a project from a json file
     @staticmethod
     def loadProject(prID : str):
         filename = "projects/" + prID + ".json"
@@ -393,14 +375,12 @@ class User():
         self.username = username
         self.email = email
         self.hapassword = hashedPassword
-        #self.isManager = isManager
         self.projects = {}
         self.assignedProjects = []
         self.activityStatus = "Active"
         self.loginStatus = "logged in"
-        #self.isAdmin = isAdmin
-
-
+        
+    # func to save user in json file
     def saveUser(self) -> None:
         filename = "users/"+ self.username + ".json"
         userData = {
@@ -416,7 +396,7 @@ class User():
         with open(filename, 'w') as jsonFile:
             json.dump(userData, jsonFile , indent=4)
 
-
+    # func to load user from a json file
     @staticmethod
     def loadUser(username : str):
         filename = "users/" + username + ".json"
@@ -434,7 +414,7 @@ class User():
             user.assignedProjects=data["assignedProjects"]
             return user
         else:
-            print(f"User {username} does not exist.")
+            rprint(f"[deep_pink2]User {username} does not exist.[/deep_pink2]")
             return None
         
 
@@ -452,7 +432,7 @@ class User():
         PrName = input()
         
         project = Project(ID , PrName , self.username)
-        #project.saveProject(ID + ".json")
+
         self.projects[ID] = {
             "ProjectName": PrName,
             "Admin": self.username,
@@ -463,51 +443,58 @@ class User():
         self.saveUser()
         save_projectID(ID)
         project.saveProject(ID)
+        rprint(f"[spring_green2]Project {ID} was created.[/spring_green2]")
         logger.info(f"Project '{ID}' was created by {self.username}.")
         return project
     
             
     def add_member_to_project(self, prID : str, username : str) -> None:  
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            if username not in self.projects[prID]["Members"]:
-                pr = Project.loadProject(prID)
-                pr.members.append(username)
-                pr.saveProject(prID)
+            if username != self.username:
+                if username not in self.projects[prID]["Members"]:
+                    pr = Project.loadProject(prID)
+                    pr.members.append(username)
+                    pr.saveProject(prID)
+                    
+                    self.projects[prID]["Members"].append(username)
+                    self.saveUser()
                 
-                self.projects[prID]["Members"].append(username)
-                self.saveUser()
-            
-                addedMember = User.loadUser(username)
-                addedMember.assignedProjects.append(prID)
-                addedMember.saveUser()
-            
-                rprint(f"[spring_green2]User {username} is now a member of {prID}.[/spring_green2]")
-                logger.info(f"'{username}' was added to Project '{prID}' by '{self.username}'.")
+                    addedMember = User.loadUser(username)
+                    addedMember.assignedProjects.append(prID)
+                    addedMember.saveUser()
+                
+                    rprint(f"[spring_green2]User {username} is now a member of {prID}.[/spring_green2]")
+                    logger.info(f"'{username}' was added to Project '{prID}' by '{self.username}'.")
+                else:
+                    rprint(f"[deep_pink2]User {username} is already a member of {prID}.[/deep_pink2]")
             else:
-                rprint(f"[deep_pink2]User {username} is already a member of {prID}.[/deep_pink2]")
+                rprint("[deep_pink2]You are already the admin![/deep_pink2]")
         else:
-            print("[deep_pink2]You do not have permission to add members to this project.[/deep_pink2]")
+            rprint("[deep_pink2]You do not have permission to add members to this project.[/deep_pink2]")
 
         
     def remove_user_from_project(self , prID : str, username : str) -> None:
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            if username in self.projects[prID]["Members"]:
-                
-                self.projects[prID]["Members"].remove(username)
-                
-                self.saveUser()
-                rprint(f"[spring_green2]User {username} was removed from project {prID}.[/spring_green2]")
-                logger.info(f"'{username}' was removed from Project '{prID}' by '{self.username}'.")
-                 
-                removed_user = User.loadUser(username)
-                removed_user.assignedProjects.remove(prID) 
-                removed_user.saveUser()
+            if username != self.username:   
+                if username in self.projects[prID]["Members"]:
+                    
+                    self.projects[prID]["Members"].remove(username)
+                    
+                    self.saveUser()
+                    rprint(f"[spring_green2]User {username} was removed from project {prID}.[/spring_green2]")
+                    logger.info(f"'{username}' was removed from Project '{prID}' by '{self.username}'.")
+                    
+                    removed_user = User.loadUser(username)
+                    removed_user.assignedProjects.remove(prID) 
+                    removed_user.saveUser()
 
-                pr = Project.loadProject(prID)
-                pr.members.remove(username)
-                pr.saveProject(prID)                   
+                    pr = Project.loadProject(prID)
+                    pr.members.remove(username)
+                    pr.saveProject(prID)                   
+                else:
+                    rprint(f"[deep_pink2]User {username} is not a member of {prID}.[/deep_pink2]")
             else:
-                rprint(f"[deep_pink2]User {username} is not a member of {prID}.[/deep_pink2]")
+                rprint("[deep_pink2]You are the admin! cannot do that.[/deep_pink2]")
         else:
             rprint("[deep_pink2]You do not have permission to remove members from this project.[/deep_pink2]")
 
@@ -528,18 +515,15 @@ class User():
                     rprint(f"[spring_green2]you successfuly deleted {prID}.[/spring_green2]")
                 else:
                     rprint(f"[deep_pink2]The {prID} file does not exist![/deep_pink2]")
-
+                # deleting the project's tasks in tasks folder
                 for task_id in task_ids:
                     taskFpath = "tasks/" + str(task_id) + ".json"
                     if os.path.exists(taskFpath):
                         os.remove(taskFpath)
-                        #print(f"Deleted task file: {taskFpath}")
                     else:
-                        #print(f"Task file {taskFpath} does not exist!")
                         continue
             else:
                 return None
-            
         else:
             rprint("[deep_pink2]You do not have permission to delete projects!![/deep_pink2]")
 
@@ -565,29 +549,30 @@ class User():
             pr.saveProject(pr.projectID)
 
     
-    #@staticmethod
+
     def createTask(self , prID):
 
         pr = Project.loadProject(prID)
         taskID = generate_unique_id()
         while(True):
             rprint("[turquoise4]1.generate a default task?\n 2.create your own task?\n Enter (1 or 2):[/turquoise4]")
-            answer = int(input())            
-            if answer != 1 and answer != 2:
+            answer = input()           
+            if answer != "1" and answer != "2":
                 rprint("[deep_pink2]Invalid input , try Again![/deep_pink2]")
 
             else:
-                if answer == 1:
+                #to quickly create a default task
+                if answer == "1":
                     task = Task(taskID)
                     self.projects[prID]["tasks"].append({"taskID" : taskID , "taskTitle" : task.taskTitle})
                     self.saveUser()
                     pr.add_task(task)
-                    #pr.tasks[task.Status][task.Priority].append(task)
                     pr.saveProject(prID)
                     task.saveTask()
                     task.saveHistory(f"The {task.taskID} was created by {self.username}.")
                     return task
-                if answer == 2:
+                # to create a task with user input
+                if answer == "2":
                     rprint("[turquoise4]Enter a title for your task or press enter to leave it empty:[/turquoise4]")
                     taskTitle = input()
                     rprint("[turquoise4]description to your task or press enter to leave it empty:[/turquoise4]")
@@ -660,15 +645,12 @@ class User():
 
 
     def add_assignee_to_task(self , prID : str , taskId : str , username : str) -> None:
-        #project = Project.loadProject(prID)
         task = Task.loadTask(taskId)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            if username in self.projects[prID]["Members"]:
+            if username in self.projects[prID]["Members"] or username == self.username:
                 if username not in task.Assignees:
                     task.Assignees.append(username)
                     task.saveTask()
-                    #project.tasks[task.Status][task.Priority][index] = task
-                    #project.saveProject(prID)
                     rprint(f"[spring_green2]the task was assigned to {username}[/spring_green2]")
                     task.saveHistory(f"the task was assigned to {username}")
                     logger.info(f"'{taskId}' task was assigned to '{username}' by '{self.username}' from '{prID}' project.")
@@ -681,10 +663,9 @@ class User():
 
 
     def remove_assignee_from_task(self , prID : str , taskID : str , username : str) -> None:
-        
         task = Task.loadTask(taskID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            if username in self.projects[prID]["Members"]:
+            if username in self.projects[prID]["Members"] or username == self.username:
                 if username in task.Assignees:
 
                     task.Assignees.remove(username)
@@ -706,8 +687,6 @@ class User():
         task = Task.loadTask(taskID)
         d = 0
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
-            #if taskID in prj.tasks:
-                #pass
             for i in range(len(prj.tasks[task.Status][task.Priority])):
                 if prj.tasks[task.Status][task.Priority][i]["taskID"] == task.taskID:
                     d += 1
@@ -717,6 +696,7 @@ class User():
                     prj.saveProject(prj.projectID)
                     if os.path.exists("tasks/" + task.taskID + ".json"):
                         os.remove("tasks/" + task.taskID + ".json")
+                        rprint("[deep_pink2]Task was deleted successfully![/deep_pink2]")
                         logger.info(f"'{taskID}' task was removed from the '{prID}' project by '{self.username}'.")
                     else:
                         rprint("[deep_pink2]task file does not exist!![/deep_pink2]")
@@ -726,7 +706,7 @@ class User():
         else:
             rprint("[deep_pink2]Only admin of a project could do this![/deep_pink2]")
                 
-        
+    # func to add comments to a task    
     def addComment(self , prID : str , taskID : str) -> None:
         task = Task.loadTask(taskID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
@@ -746,7 +726,7 @@ class User():
         else:
             rprint("[deep_pink2]Only the task's assignees could do that![/deep_pink2]")
 
-
+    # fun to clear the comments of a task
     def clearComments(self , prID : str , taskID : str) -> None:
         task = Task.loadTask(taskID)
         if prID in self.projects and self.projects[prID]["Admin"] == self.username:
@@ -796,7 +776,7 @@ class User():
         else:
             rprint("[deep_pink2]Only the admin could do that![/deep_pink2]")
 
-
+    # func to check the existence of projects assigned to a user. it might have been deleted!
     def refresh(self):
         d = 0
         for i in range(len(self.assignedProjects)):
@@ -835,12 +815,12 @@ class User():
         for item in self.projects:
             listOfProj.append(item)
 
-        tableOfProjects(listOfProj)
+        makeTable(listOfProj, "PROJECT ID")
     
 
     def listOfAssignedProject(self):
         listOfProj = self.assignedProjects
-        tableOfProjects(listOfProj)
+        makeTable(listOfProj, "PROJECT ID")
 
 
     @staticmethod
@@ -875,14 +855,19 @@ class User():
         print()
 
         rprint("[turquoise4]Assignees:[/turquoise4]")
-        tableOfAssignees(task.Assignees)
+        makeTable(task.Assignees, "ASSIGNEES")
         
-        print("[turquoise4]History:[/turquoise4]")
+        rprint("[turquoise4]Comments:[/turquoise4]")
+        makeTable(task.comments, "COMMENTS")
+
+        rprint("[turquoise4]History:[/turquoise4]")
         print()
         for line in history:
-            rprint(f"[cyan3]{line}[/cyan3]")
+            rprint(f"[gold1]{line}[/gold1]")
         
         rprint("[light_coral]************************************************************************************************************************[/light_coral]")
+
+
 
 
     def createTable(self, prID ) -> None:
@@ -935,11 +920,11 @@ class User():
             main_table.add_row(*row)
 
         def getStatusAndPrioAndRow():
-            print("Enter the task status:")
+            rprint("[turquoise4]Enter the task status:[/turquoise4]")
             s = Task.get_status().value
-            print("Enter the priority of the task:")
+            rprint("[turquoise4]Enter the priority of the task:[/turquoise4]")
             p = Task.get_priority().value
-            print("Enter the desired task row number:")
+            rprint("[turquoise4]Enter the desired task row number:[/turquoise4]")
             row = int(input())
 
             task_id = tasks[s][p][row - 1]["taskID"] 
@@ -952,12 +937,17 @@ class User():
             console.print(main_table)
 
             rprint("[gold3]What do you want to do?[/gold3]")
-            rprint("[bright_white]1)[/bright_white][hot_pink3]View actions related to tasks[/hot_pink3]")
-            rprint("[bright_white]2)[/bright_white][hot_pink3]Back[/hot_pink3]")
+            rprint("[bright_white]1)[/bright_white][hot_pink3]View members of this project[/hot_pink3]")
+            rprint("[bright_white]2)[/bright_white][hot_pink3]View actions related to tasks[/hot_pink3]")
+            rprint("[bright_white]3)[/bright_white][hot_pink3]Back[/hot_pink3]")
 
             answe = input()
 
             if answe == "1":
+                project = Project.loadProject(prID)
+                makeTable(project.members, "MEMBERS")
+
+            elif answe == "2":
                 while(True):
                     printTaskActions()
 
@@ -1130,7 +1120,8 @@ class User():
                     elif inp == "5":
                         try:
                             task_id = getStatusAndPrioAndRow() 
-                            newUser = input("Enter the username of the desired user: ")
+                            rprint("[turquoise4]Enter the username of the desired user: [turquoise4/]")
+                            newUser = input()
                             
                             self.add_assignee_to_task(prID , task_id , newUser)
                         except Exception:
@@ -1187,7 +1178,8 @@ class User():
 
                         try:
                             task_id = getStatusAndPrioAndRow() 
-                            newUser = input("Enter the username of the desired user: ") 
+                            rprint("[turquoise4]Enter the username of the desired user: [turquoise4/]")
+                            newUser = input() 
 
                             self.remove_assignee_from_task(prID , task_id , newUser)
                         except Exception:
@@ -1518,7 +1510,6 @@ class User():
                                     row.append("")
                             main_table.add_row(*row)
                     elif inp == "12":
-                        getStatusAndPrioAndRow()
 
                         try:
                             task_id = getStatusAndPrioAndRow() 
@@ -1577,7 +1568,7 @@ class User():
                         break
                     else:
                         rprint("[deep_pink2]Invalid answer, try again.[/deep_pink2]")
-            elif answe == "2":
+            elif answe == "3":
                 project = Project.loadProject(prID)
 
                 projTitle = f"project : '{project.projectID}', admin : '{project.admin}'"
@@ -1624,6 +1615,12 @@ class User():
                         else:
                             row.append("")
                     main_table.add_row(*row)
+
+
+                if prID in self.projects:
+                    self.listOfCreatedProject()
+                elif prID in self.assignedProjects:
+                    self.listOfAssignedProject()
 
                 break
             else:
@@ -1884,38 +1881,75 @@ def projectActions(user):
 
     while(True):
         if answ == "1":
-            prID = input("Enter the desired project ID: ")
+            rprint("[turquoise4]Enter the desired project ID:[/turquoise4]")
+            prID = input()
             user.showProject(prID)
 
             printProjectActions()
             answ = input()
         elif answ == "2":
-            prID = input("Enter the desired project ID: ")
-            newTitle = input("Enter the new title: ")
+            rprint("[turquoise4]Enter the desired project ID:[/turquoise4]")
+            prID = input()
+            rprint("[turquoise4]Enter the new title:[/turquoise4]")
+            newTitle = input()
             user.Retitle_Pr(prID, newTitle)
+
+
+            if prID in user.projects:
+                user.listOfCreatedProject()
+            elif prID in user.assignedProjects:
+                user.listOfAssignedProject()
 
             printProjectActions()
             answ = input()
         elif answ == "3":
-            prID = input("Enter the desired project ID: ")
-            newUser = input("Enter the username of the desired user: ")
+            rprint("[turquoise4]Enter the desired project ID:[/turquoise4]")
+            prID = input()
+            rprint("[turquoise4]Enter the username of the desired user:[/turquoise4]")
+            newUser = input()
 
             user.add_member_to_project(prID, newUser)
+
+            if prID in user.projects:
+                user.listOfCreatedProject()
+            elif prID in user.assignedProjects:
+                user.listOfAssignedProject()
 
             printProjectActions()
             answ = input()
         elif answ == "4":
-            prID = input("Enter the desired project ID: ")
-            newUser = input("Enter the username of the desired user: ")
+            rprint("[turquoise4]Enter the desired project ID:[/turquoise4]")
+            prID = input()
+            rprint("[turquoise4]Enter the username of the desired user:[/turquoise4]")
+            newUser = input()
 
             user.remove_user_from_project(prID, newUser)
+
+            if prID in user.projects:
+                user.listOfCreatedProject()
+            elif prID in user.assignedProjects:
+                user.listOfAssignedProject()
 
             printProjectActions()
             answ = input()
         elif answ == "5":
-            prID = input("Enter the desired project ID: ")
+            rprint("[turquoise4]Enter the desired project ID:[/turquoise4]")
+            prID = input()
+
+            check = False
+
+            if prID in user.projects:
+                check = True
+            elif prID in user.assignedProjects:
+                check = False
 
             user.delete_project(prID)
+
+            if check:
+                user.listOfCreatedProject()
+            else:
+                user.listOfAssignedProject()
+
 
             printProjectActions()
             answ = input()
@@ -2109,7 +2143,7 @@ def start() -> None:
             rprint("[bright_white]3)[/bright_white][navy_blue]Quit[/navy_blue]")
             answer = input()
 
-
+# func to create the folders and files that the app need in case they don't exist.
 def createFilesFolders():
     folders = ['users', 'projects', 'tasks', 'tasks/History']
     file_path = os.path.join('projectsID.json')
